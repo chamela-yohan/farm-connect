@@ -1,5 +1,6 @@
 package lk.farmconnect.user;
 
+import lk.farmconnect.common.response.ApiResponse;
 import lk.farmconnect.user.dto.UserCreateRequest;
 import lk.farmconnect.user.dto.UserResponse;
 import lk.farmconnect.user.service.UserService;
@@ -16,8 +17,9 @@ public class UserController {
     private final UserService userService;
 
     @PostMapping
-    public ResponseEntity<UserResponse> createUser(@Valid @RequestBody UserCreateRequest request) {
+    public ResponseEntity<ApiResponse<UserResponse>> createUser(@Valid @RequestBody UserCreateRequest request) {
         UserResponse response = userService.createUser(request);
-        return ResponseEntity.ok(response);
+
+        return ResponseEntity.ok(ApiResponse.success(response));
     }
 }
