@@ -1,35 +1,23 @@
 package lk.farmconnect.user;
 
-import org.locationtech.jts.geom.Coordinate;
-import org.locationtech.jts.geom.GeometryFactory;
-import org.locationtech.jts.geom.Point;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import lk.farmconnect.user.dto.UserCreateRequest;
+import lk.farmconnect.user.dto.UserResponse;
+import lk.farmconnect.user.service.UserService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/users")
+@RequiredArgsConstructor
 public class UserController {
 
-    private final UserRepository userRepository;
-    private final GeometryFactory geometryFactory = new GeometryFactory();
-
-    public UserController(UserRepository userRepository) {
-        this.userRepository = userRepository;
-    }
+    private final UserService userService;
 
     @PostMapping
-    public User createUser(
-            @RequestParam("name") String name,
-            @RequestParam("role") String role,
-            @RequestParam("lat") double lat,
-            @RequestParam("lon") double lon) {
-
-        // Convert standard Lat/Lon into a PostGIS Point
-        Point location = geometryFactory.createPoint(new Coordinate(lon, lat));
-
-        User newUser = new User(name, role, location);
-        return userRepository.save(newUser);
+    public ResponseEntity<UserResponse> createUser(@Valid @RequestBody UserCreateRequest request) {
+        UserResponse response = userService.createUser(request);
+        return ResponseEntity.ok(response);
     }
 }

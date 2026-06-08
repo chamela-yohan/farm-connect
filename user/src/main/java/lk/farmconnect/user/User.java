@@ -1,39 +1,58 @@
 package lk.farmconnect.user;
 
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 import org.locationtech.jts.geom.Point;
 
 @Entity
 @Table(name = "users")
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 public class User {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private long id;
+    private Long id;
 
+    @Column(nullable = false)
     private String name;
 
-    private String role;
+    @Column(nullable = false, unique = true)
+    private String email;
+
+    @Column(nullable = false)
+    private String mobileNumber;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private UserRole role;
+
+    private String profilePictureUrl;
 
     @Column(columnDefinition = "geometry(Point, 4326)")
     private Point location;
 
-    public User() {}
+    private String address;
+    private String city;
 
-    public User(String name, String role, Point location) {
-        this.name = name;
-        this.role = role;
-        this.location = location;
+    @Column(nullable = false, updatable = false)
+    private java.time.LocalDateTime createdAt;
+
+    private java.time.LocalDateTime updatedAt;
+
+    @PrePersist
+    protected void onCreate() {
+        createdAt = java.time.LocalDateTime.now();
+        updatedAt = java.time.LocalDateTime.now();
     }
 
-    // Getters and Setters
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
-    public String getRole() { return role; }
-    public void setRole(String role) { this.role = role; }
-    public Point getLocation() { return location; }
-    public void setLocation(Point location) { this.location = location; }
-
-
+    @PreUpdate
+    protected void onUpdate() {
+        updatedAt = java.time.LocalDateTime.now();
+    }
 }
