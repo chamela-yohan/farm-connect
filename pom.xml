@@ -2,7 +2,6 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
-
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>lk.farmconnect</groupId>
@@ -12,12 +11,13 @@
 
     <modules>
         <module>common</module>
+        <module>user</module>
         <module>app</module>
     </modules>
 
     <properties>
-        <java.version>25</java.version>
-        <spring-boot.version>4.0.6</spring-boot.version>
+        <java.version>21</java.version>
+        <spring-boot.version>3.5.14</spring-boot.version>
         <maven.compiler.source>${java.version}</maven.compiler.source>
         <maven.compiler.target>${java.version}</maven.compiler.target>
     </properties>
@@ -31,7 +31,25 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
+
+            <!-- Explicit versions for spatial dependencies -->
+            <dependency>
+                <groupId>org.hibernate.orm</groupId>
+                <artifactId>hibernate-spatial</artifactId>
+                <version>6.5.2.Final</version>
+            </dependency>
+            <dependency>
+                <groupId>org.locationtech.jts</groupId>
+                <artifactId>jts-core</artifactId>
+                <version>1.19.0</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
+    <repositories>
+        <repository>
+            <id>central</id>
+            <url>https://repo.maven.apache.org/maven2</url>
+        </repository>
+    </repositories>
 </project>

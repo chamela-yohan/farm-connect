@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgis/postgis:16-3.4
+    container_name: farmconnect-db
+    environment:
+      POSTGRES_USER: farmuser
+      POSTGRES_PASSWORD: farmpass
+      POSTGRES_DB: farmconnect_db
+    ports:
+      - "5434:5432"
+    volumes:
+      - "postgres_data:/var/lib/postgresql/data"
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
