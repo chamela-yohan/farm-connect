@@ -1,13 +1,15 @@
 package lk.farmconnect.user.dto;
 
+import lk.farmconnect.user.UserRole;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 public record UserResponse(
-        Long id,
+        UUID id,
         String name,
         String email,
         String mobileNumber,
-        UserRoleDTO role,
+        UserRole role,
         String profilePictureUrl,
         Double lat,
         Double lon,
