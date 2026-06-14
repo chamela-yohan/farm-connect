@@ -1,9 +1,11 @@
 package lk.farmconnect.user.service;
 
+import lk.farmconnect.common.exception.ResourceNotFoundException;
 import lk.farmconnect.user.User;
 import lk.farmconnect.user.UserRepository;
+import lk.farmconnect.user.dto.PublicUserResponse;
 import lk.farmconnect.user.dto.UserCreateRequest;
-import lk.farmconnect.user.dto.UserResponse;
+import lk.farmconnect.user.dto.PrivateUserResponse;
 import lk.farmconnect.user.exception.UserNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,7 +28,7 @@ public class UserService {
     private final GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
 
     @Transactional
-    public UserResponse createUser(UserCreateRequest request) {
+    public PrivateUserResponse createUser(UserCreateRequest request) {
         log.info("Creating new user with email: {}", request.email());
 
         // Convert Lat/Lon to PostGIS Point (JTS expects X=Lon, Y=Lat)
@@ -45,33 +47,45 @@ public class UserService {
 
         // Save and Map to Response DTO
         User savedUser = userRepository.save(user);
-        return mapToResponse(savedUser);
+        return mapToPrivateResponse(savedUser);
     }
 
+    // Private
     @Transactional(readOnly = true)
-    public UserResponse getUserById(UUID id) {
-        User user = userRepository.findById(id)
-                .orElseThrow(() -> new UserNotFoundException("User not found with ID: " + id));
-        return mapToResponse(user);
+    public PrivateUserResponse getMyPrivateProfile(UUID userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        return mapToPrivateResponse(user);
     }
 
-    // Private mapper to ensure JTS Point is NEVER exposed to the JSON serializer
-    private UserResponse mapToResponse(User user) {
+    // Public
+    @Transactional(readOnly = true)
+    public PublicUserResponse getPublicProfile(UUID userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        return mapToPublicResponse(user);
+    }
+
+    // Mapper for Private Data
+    private PrivateUserResponse mapToPrivateResponse(User user) {
         Double lat = user.getLocation() != null ? user.getLocation().getY() : null;
         Double lon = user.getLocation() != null ? user.getLocation().getX() : null;
 
-        return new UserResponse(
+        return new PrivateUserResponse(
+                user.getId(), user.getName(), user.getEmail(), user.getMobileNumber(),
+                user.getRole(), user.getProfilePictureUrl(), lat, lon,
+                user.getAddress(), user.getCity(), user.getCreatedAt()
+        );
+    }
+
+    // Mapper for Public Data (Notice: No email, no phone, no exact lat/lon)
+    private PublicUserResponse mapToPublicResponse(User user) {
+        return new PublicUserResponse(
                 user.getId(),
                 user.getName(),
-                user.getEmail(),
-                user.getMobileNumber(),
                 user.getRole(),
                 user.getProfilePictureUrl(),
-                lat,
-                lon,
-                user.getAddress(),
-                user.getCity(),
-                user.getCreatedAt()
+                user.getCity()
         );
     }
 }

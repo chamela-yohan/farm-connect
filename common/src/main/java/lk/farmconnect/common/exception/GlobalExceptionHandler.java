@@ -12,7 +12,7 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.multipart.MultipartException;
 import org.springframework.web.multipart.support.MissingServletRequestPartException;
-
+import org.springframework.security.core.AuthenticationException;
 
 import java.util.stream.Collectors;
 
@@ -28,6 +28,16 @@ public class GlobalExceptionHandler {
                 .collect(Collectors.joining(", "));
 
         return ResponseEntity.badRequest().body(ApiResponse.error(errorMessage));
+    }
+
+    @ExceptionHandler(AuthenticationException.class)
+    public ResponseEntity<ApiResponse<Void>> handleAuthenticationException(AuthenticationException ex) {
+        // Log the failure for security monitoring/audit trails
+        log.warn("Authentication failed: {}", ex.getMessage());
+
+        // Return 401 Unauthorized with a generic message
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(ApiResponse.error("Invalid email or password."));
     }
 
     //  Handle Missing Multipart Parts (Fixes "Required part 'product' is not present")

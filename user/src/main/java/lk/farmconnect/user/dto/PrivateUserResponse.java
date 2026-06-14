@@ -4,7 +4,7 @@ import lk.farmconnect.user.UserRole;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-public record UserResponse(
+public record PrivateUserResponse(
         UUID id,
         String name,
         String email,

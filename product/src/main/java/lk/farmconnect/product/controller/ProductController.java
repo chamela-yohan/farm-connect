@@ -5,6 +5,7 @@ import jakarta.websocket.server.PathParam;
 import lk.farmconnect.common.response.ApiResponse;
 import lk.farmconnect.product.dto.ProductCreateRequest;
 import lk.farmconnect.product.dto.ProductResponse;
+import lk.farmconnect.product.entity.Product;
 import lk.farmconnect.product.service.ProductService;
 import lk.farmconnect.user.User;
 import lombok.RequiredArgsConstructor;
@@ -66,5 +67,31 @@ public class ProductController {
 
         productService.softDeleteProduct(id, farmer.getId());
         return ResponseEntity.ok(ApiResponse.success("Product deleted successfully"));
+    }
+
+    // =========================================================
+    //  TEMPORARY TEST ENDPOINT (We will delete this in Step 3)
+    @GetMapping("/test/geo")
+    public ResponseEntity<ApiResponse<Page<ProductResponse>>> testGeoSearch(
+            @RequestParam(defaultValue = "6.9271") double lat,
+            @RequestParam(defaultValue = "79.8612") double lon,
+            @RequestParam(defaultValue = "10000") double radius) { // 10km in meters
+
+        Pageable pageable = PageRequest.of(0, 10);
+        Page<Product> products = productRepository.findNearbyActiveProducts(lat, lon, radius, pageable);
+
+        // Map to DTOs
+        Page<ProductResponse> dtoPage = products.map(this::mapToResponse);
+        return ResponseEntity.ok(ApiResponse.success(dtoPage));
+    }
+
+    // Helper mapper for the test (Move this to a private method in the controller or use the service)
+    private ProductResponse mapToResponse(Product p) {
+        return new ProductResponse(
+                p.getId(), p.getTitle(), p.getDescription(), p.getPrice(),
+                p.getAttributes(), p.getStatus(),
+                p.getFarmer().getId(), p.getFarmer().getName(),
+                p.getCreatedAt()
+        );
     }
 }
