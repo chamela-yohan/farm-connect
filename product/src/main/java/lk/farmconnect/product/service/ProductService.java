@@ -8,6 +8,7 @@ import lk.farmconnect.common.exception.ResourceNotFoundException;
 import lk.farmconnect.product.dto.ProductCreateRequest;
 import lk.farmconnect.product.dto.ProductResponse;
 import lk.farmconnect.product.entity.Product;
+import lk.farmconnect.product.mapper.ProductMapper;
 import lk.farmconnect.product.repository.ProductRepository;
 import lk.farmconnect.user.User;
 import lk.farmconnect.user.UserRepository;
@@ -34,6 +35,7 @@ public class ProductService {
     private final FileStorageService fileStorageService;
     private final ObjectMapper objectMapper;
     private final Validator validator;
+    private final ProductMapper productMapper;
 
 
     @Transactional
@@ -89,20 +91,20 @@ public class ProductService {
                 .build();
 
         Product saved = productRepository.save(product);
-        return mapToResponse(saved);
+        return productMapper.toResponse(saved);
     }
 
     @Transactional(readOnly = true)
     public Page<ProductResponse> getAllActiveProducts(Pageable pageable) {
         return productRepository.findByIsDeletedFalse(pageable)
-                .map(this::mapToResponse);
+                .map(productMapper::toResponse);
     }
 
     @Transactional(readOnly = true)
     public ProductResponse getProductById(UUID id) {
         Product product = productRepository.findByIdAndIsDeletedFalse(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found with ID: " + id));
-        return mapToResponse(product);
+        return productMapper.toResponse(product);
     }
 
     // Security: Ensure only the owner can delete
@@ -120,12 +122,4 @@ public class ProductService {
         log.info("Product {} soft-deleted by farmer {}", productId, requestingFarmerId);
     }
 
-    private ProductResponse mapToResponse(Product p) {
-        return new ProductResponse(
-                p.getId(), p.getTitle(), p.getDescription(), p.getPrice(),
-                p.getAttributes(), p.getStatus(),
-                p.getFarmer().getId(), p.getFarmer().getName(),
-                p.getCreatedAt()
-        );
-    }
 }

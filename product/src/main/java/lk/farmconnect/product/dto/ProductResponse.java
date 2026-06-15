@@ -15,5 +15,7 @@ public record ProductResponse(
         ProductStatus status,
         UUID farmerId,
         String farmerName,
-        LocalDateTime createdAt
+        LocalDateTime createdAt,
+        Double lat,
+        Double lon
 ) {}

@@ -67,8 +67,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/v1/auth/**").permitAll()
                         .requestMatchers("/actuator/health").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/v1/products", "/api/v1/products/*").permitAll()
-                        .requestMatchers("/api/v1/products/public/**").permitAll()
+                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/products/**").permitAll()
+                        .requestMatchers("/api/v1/products/public/**").permitAll()  // REDUNDANT
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session ->

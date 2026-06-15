@@ -41,11 +41,19 @@ public interface ProductRepository extends JpaRepository<Product, UUID>, JpaSpec
     @EntityGraph(attributePaths = {"farmer"})
     @Query("SELECT p FROM Product p JOIN p.farmer f WHERE " +
             "p.isDeleted = false AND p.status = :status AND " +
-            "ST_DWithin(f.location, :buyerLocation, :radiusInMeters) = true")
+            "ST_Distance(f.location, :buyerLocation) <= :radiusInMeters")
     Page<Product> findNearbyActiveProducts(
             @Param("buyerLocation") Point buyerLocation,
             @Param("radiusInMeters") double radiusInMeters,
             @Param("status") ProductStatus status,
             Pageable pageable
     );
+
+    // ==========================================
+    // SPECIFICATION SEARCH (With N+1 Prevention)
+    // ==========================================
+
+    @EntityGraph(attributePaths = {"farmer"})
+    Page<Product> findAll(org.springframework.data.jpa.domain.Specification<Product> spec, Pageable pageable);
+
 }
