@@ -1,4 +1,6 @@
 package lk.farmconnect.order.entity;
 
-public class DeliveryMethod {
+public enum DeliveryMethod {
+    PICKUP,
+    DELIVERY
 }

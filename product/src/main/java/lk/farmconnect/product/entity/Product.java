@@ -7,6 +7,7 @@ import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -33,6 +34,23 @@ public class Product {
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
     private Map<String, Object> attributes; // e.g., {"weight_kg": 5, "expiry_date": "2026-07-01"}
+
+    @Version // Optimistic looking; Prevents race conditions when two buyers buy the last stock
+    private Integer version;
+
+    @Column(precision = 10, scale = 2) // Actual trading rules
+    private BigDecimal availableStock; // Current live stock
+
+    @Column(precision = 10, scale = 2)
+    private BigDecimal minOrderQty; // e.g., 1.0 kg
+
+    @Column(precision = 10, scale = 2)
+    private BigDecimal maxOrderQty; // e.g., 10.0 kg
+
+    @Column(precision = 10, scale = 2)
+    private BigDecimal qtyStep;        // e.g., 0.5 kg increments
+
+    private LocalDate expiryDate; // Null for non-perishables (like tractors)
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

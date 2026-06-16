@@ -14,6 +14,7 @@
         <module>auth</module>
         <module>user</module>
         <module>product</module>
+        <module>order</module>
         <module>app</module>
     </modules>
 

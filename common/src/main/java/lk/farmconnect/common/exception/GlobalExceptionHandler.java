@@ -14,6 +14,7 @@ import org.springframework.web.multipart.MultipartException;
 import org.springframework.web.multipart.support.MissingServletRequestPartException;
 import org.springframework.security.core.AuthenticationException;
 
+import javax.smartcardio.CardException;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -107,6 +108,14 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> handleMessageNotReadable(HttpMessageNotReadableException ex) {
         return ResponseEntity.badRequest().body(
                 ApiResponse.error("Malformed or invalid JSON in request body. Please check your syntax.")
+        );
+    }
+
+    // Cart
+    @ExceptionHandler(BusinessException.class)
+    public ResponseEntity<ApiResponse<Void>> handleCardException(BusinessException ex) {
+        return ResponseEntity.badRequest().body(
+                ApiResponse.error(ex.getMessage())
         );
     }
 }

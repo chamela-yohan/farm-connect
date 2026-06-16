@@ -1,4 +1,7 @@
 package lk.farmconnect.order.exception;
 
-public class InvalidQuantityException {
+public class InvalidQuantityException extends CartException {
+    public InvalidQuantityException(String message) {
+        super(message);
+    }
 }

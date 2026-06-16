@@ -1,4 +1,7 @@
 package lk.farmconnect.common.exception;
 
-public class BussinessException {
+public class BusinessException extends RuntimeException {
+    public BusinessException(String message) {
+        super(message);
+    }
 }
