@@ -77,4 +77,31 @@ public class Order {
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
     }
+
+    //Domain-Driven state machine
+    public void transitionTo(OrderStatus newStatus) {
+        if (!getAllowedTransitions(this.status).contains(newStatus)) {
+            throw new lk.farmconnect.common.exception.BusinessException(
+                    "Invalid status transition from " + this.status + " to " + newStatus
+            );
+        }
+        this.status = newStatus;
+    }
+
+    private java.util.List<OrderStatus> getAllowedTransitions(OrderStatus current) {
+        return
+                switch (current) {
+                    case PENDING ->
+                            java.util.List.of(OrderStatus.ACCEPTED, OrderStatus.REJECTED, OrderStatus.CANCELLED);
+                    case ACCEPTED ->
+                            java.util.List.of(OrderStatus.READY_FOR_PICKUP, OrderStatus.OUT_FOR_DELIVERY, OrderStatus.CANCELLED);
+                    case READY_FOR_PICKUP ->
+                            java.util.List.of(OrderStatus.OUT_FOR_DELIVERY, OrderStatus.DELIVERED, OrderStatus.CANCELLED);
+                    case OUT_FOR_DELIVERY -> java.util.List.of(OrderStatus.DELIVERED, OrderStatus.CANCELLED);
+                    case DELIVERED -> java.util.List.of(OrderStatus.COMPLETED);
+                    // Terminal states cannot transition
+                    case REJECTED, CANCELLED, COMPLETED -> java.util.List.of();
+                };
+    }
+
 }
