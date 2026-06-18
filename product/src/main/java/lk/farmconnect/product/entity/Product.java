@@ -50,6 +50,13 @@ public class Product {
     @Column(precision = 10, scale = 2)
     private BigDecimal qtyStep;        // e.g., 0.5 kg increments
 
+    // DELIVERY CAPABILITY
+    @Column(nullable = false)
+    private boolean isDeliveryAvailable; // True if farmer can deliver, False for pickup only
+
+    @Column(precision = 10, scale = 2)
+    private BigDecimal deliveryFee; // Fee charged if buyer selects DELIVERY
+
     private LocalDate expiryDate; // Null for non-perishables (like tractors)
 
     @Enumerated(EnumType.STRING)

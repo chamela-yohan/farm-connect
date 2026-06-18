@@ -57,6 +57,9 @@ public class Order {
     @Column(columnDefinition = "TEXT")
     private String farmerNotes;
 
+    @Column(updatable = false)
+    private String parentOrderRef; // e.g., "ORD-2026-001" (Shared across split orders)
+
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<OrderItem> items = new ArrayList<>();

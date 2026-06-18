@@ -89,6 +89,7 @@ public class ProductService {
                 .minOrderQty(request.minOrderQty())
                 .maxOrderQty(request.maxOrderQty())
                 .qtyStep(request.qtyStep())
+                .isDeliveryAvailable(request.isDeliveryAvailable())
                 .expiryDate(request.expiryDate())
                 .farmer(farmer)
                 .imageUrls(imageUrls)

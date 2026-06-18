@@ -2,9 +2,7 @@ package lk.farmconnect.order.controller;
 
 import jakarta.validation.Valid;
 import lk.farmconnect.common.response.ApiResponse;
-import lk.farmconnect.order.dto.OrderCreateRequest;
-import lk.farmconnect.order.dto.OrderResponse;
-import lk.farmconnect.order.dto.OrderStatusUpdateRequest;
+import lk.farmconnect.order.dto.*;
 import lk.farmconnect.order.service.OrderService;
 import lk.farmconnect.user.User;
 import lombok.RequiredArgsConstructor;
@@ -12,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -21,15 +20,23 @@ public class OrderController {
 
     private final OrderService orderService;
 
-    //  BUYER ENDPOINT: Checkout
+    // BUYER ENDPOINT: Checkout (Returns List of Split Orders)
     @PostMapping("/checkout")
-    public ResponseEntity<ApiResponse<OrderResponse>> checkout(
+    public ResponseEntity<ApiResponse<List<OrderResponse>>> checkout(
             @Valid @RequestBody OrderCreateRequest request,
             @AuthenticationPrincipal User buyer) {
         return ResponseEntity.ok(ApiResponse.success(orderService.checkout(buyer, request)));
     }
 
-    //  SHARED ENDPOINT: View Order Details
+    // BUYER ENDPOINT: Buy Now (Direct Checkout)
+    @PostMapping("/buy-now")
+    public ResponseEntity<ApiResponse<OrderResponse>> buyNow(
+            @Valid @RequestBody BuyNowRequest request,
+            @AuthenticationPrincipal User buyer) {
+        return ResponseEntity.ok(ApiResponse.success(orderService.buyNow(buyer, request)));
+    }
+
+    // SHARED ENDPOINT: View Order Details
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<OrderResponse>> getOrder(
             @PathVariable UUID id,
@@ -37,7 +44,7 @@ public class OrderController {
         return ResponseEntity.ok(ApiResponse.success(orderService.getOrderById(id, currentUser)));
     }
 
-    //  FARMER ENDPOINT: Update Status (Accept, Reject, Deliver, etc.)
+    // FARMER ENDPOINT: Update Status
     @PutMapping("/{id}/status")
     public ResponseEntity<ApiResponse<OrderResponse>> updateStatus(
             @PathVariable UUID id,

@@ -16,6 +16,8 @@ public record ProductResponse(
         BigDecimal minOrderQty,
         BigDecimal maxOrderQty,
         BigDecimal qtyStep,
+        boolean isDeliveryAvailable,
+        BigDecimal deliveryFee,
         LocalDate expiryDate,
         BigDecimal price,
         Map<String, Object> attributes,
