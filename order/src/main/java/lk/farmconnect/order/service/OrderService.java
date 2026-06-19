@@ -124,6 +124,10 @@ public class OrderService {
         OrderStatus oldStatus = order.getStatus();
         order.transitionTo(request.newStatus());
 
+        if (request.notes() != null && !request.notes().isBlank()) {
+            order.setFarmerNotes(request.notes());
+        }
+
         // STOCK MANAGEMENT LOGIC
         if (request.newStatus() == OrderStatus.ACCEPTED) {
             for (OrderItem item : order.getItems()) {

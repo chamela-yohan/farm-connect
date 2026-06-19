@@ -111,6 +111,20 @@ public class GlobalExceptionHandler {
         );
     }
 
+    // Handle requests to endpoints that don't exist (404 Not Found)
+    @ExceptionHandler(org.springframework.web.servlet.resource.NoResourceFoundException.class)
+    public ResponseEntity<ApiResponse<Void>> handleNoResourceFoundException(org.springframework.web.servlet.resource.NoResourceFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(ApiResponse.error("The requested endpoint does not exist. Please check the URL."));
+    }
+
+    // Handle requests with the wrong HTTP method (e.g., POST instead of GET) (405 Method Not Allowed)
+    @ExceptionHandler(org.springframework.web.HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ApiResponse<Void>> handleMethodNotSupportedException(org.springframework.web.HttpRequestMethodNotSupportedException ex) {
+        return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED)
+                .body(ApiResponse.error("HTTP method not allowed for this endpoint."));
+    }
+
     // Cart
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<ApiResponse<Void>> handleCardException(BusinessException ex) {
