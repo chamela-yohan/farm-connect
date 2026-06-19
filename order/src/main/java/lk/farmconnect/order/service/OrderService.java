@@ -173,6 +173,17 @@ public class OrderService {
         return orderMapper.toOrderResponse(order);
     }
 
+    @Transactional(readOnly = true)
+    public Order getOrderEntityById(UUID orderId, User currentUser) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
+
+        if (!order.getBuyer().getId().equals(currentUser.getId()) && !order.getFarmer().getId().equals(currentUser.getId())) {
+            throw new BusinessException("Access Denied: You do not have permission to view this order.");
+        }
+        return order;
+    }
+
     // ==========================================
     // PRIVATE HELPERS
     // ==========================================

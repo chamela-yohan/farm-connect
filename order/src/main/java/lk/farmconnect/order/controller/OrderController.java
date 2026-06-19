@@ -3,12 +3,18 @@ package lk.farmconnect.order.controller;
 import jakarta.validation.Valid;
 import lk.farmconnect.common.response.ApiResponse;
 import lk.farmconnect.order.dto.*;
+import lk.farmconnect.order.entity.Order;
 import lk.farmconnect.order.service.OrderService;
 import lk.farmconnect.user.User;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+
+import lk.farmconnect.order.service.InvoiceService;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 
 import java.util.List;
 import java.util.UUID;
@@ -19,6 +25,7 @@ import java.util.UUID;
 public class OrderController {
 
     private final OrderService orderService;
+    private final InvoiceService invoiceService;
 
     // BUYER ENDPOINT: Checkout (Returns List of Split Orders)
     @PostMapping("/checkout")
@@ -51,5 +58,26 @@ public class OrderController {
             @Valid @RequestBody OrderStatusUpdateRequest request,
             @AuthenticationPrincipal User farmer) {
         return ResponseEntity.ok(ApiResponse.success(orderService.updateOrderStatus(id, request, farmer)));
+    }
+
+    @GetMapping("/{id}/invoice")
+    public ResponseEntity<byte[]> downloadInvoice(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal User currentUser) {
+
+        // Reuse the security check from getOrderById
+        OrderResponse orderData = orderService.getOrderById(id, currentUser);
+
+
+        Order orderEntity = orderService.getOrderEntityById(id, currentUser);
+
+        byte[] pdfBytes = invoiceService.generateInvoice(orderEntity);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_PDF);
+        headers.setContentDispositionFormData("inline", "Invoice_" + orderEntity.getOrderNumber() + ".pdf");
+        headers.setContentLength(pdfBytes.length);
+
+        return new ResponseEntity<>(pdfBytes, headers, HttpStatus.OK);
     }
 }
