@@ -8,6 +8,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import jakarta.annotation.PostConstruct;
+
+import java.io.InputStream;
 import java.util.List;
 import java.util.UUID;
 
@@ -41,6 +43,24 @@ public class FileStorageService {
                 .credentials(accessKey, secretKey)
                 .build();
         createBucketIfNotExists();
+    }
+
+    // Add this to FileStorageService.java
+    public String uploadStream(InputStream inputStream, String fileName, String folder, String contentType, long size) {
+        try {
+            String uniqueFilename = folder + "/" + UUID.randomUUID() + "-" + fileName;
+            minioClient.putObject(
+                    PutObjectArgs.builder()
+                            .bucket(bucketName)
+                            .object(uniqueFilename)
+                            .stream(inputStream, size, -1)
+                            .contentType(contentType)
+                            .build()
+            );
+            return endpoint + "/" + bucketName + "/" + uniqueFilename;
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to upload stream", e);
+        }
     }
 
     private void createBucketIfNotExists() {

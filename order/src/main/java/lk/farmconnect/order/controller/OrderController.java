@@ -60,24 +60,4 @@ public class OrderController {
         return ResponseEntity.ok(ApiResponse.success(orderService.updateOrderStatus(id, request, farmer)));
     }
 
-    @GetMapping("/{id}/invoice")
-    public ResponseEntity<byte[]> downloadInvoice(
-            @PathVariable UUID id,
-            @AuthenticationPrincipal User currentUser) {
-
-        // Reuse the security check from getOrderById
-        OrderResponse orderData = orderService.getOrderById(id, currentUser);
-
-
-        Order orderEntity = orderService.getOrderEntityById(id, currentUser);
-
-        byte[] pdfBytes = invoiceService.generateInvoice(orderEntity);
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_PDF);
-        headers.setContentDispositionFormData("inline", "Invoice_" + orderEntity.getOrderNumber() + ".pdf");
-        headers.setContentLength(pdfBytes.length);
-
-        return new ResponseEntity<>(pdfBytes, headers, HttpStatus.OK);
-    }
 }

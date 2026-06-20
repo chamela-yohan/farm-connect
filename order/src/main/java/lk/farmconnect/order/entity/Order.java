@@ -60,6 +60,10 @@ public class Order {
     @Column(updatable = false)
     private String parentOrderRef; // e.g., "ORD-2026-001" (Shared across split orders)
 
+    // PERMANENT INVOICE STORAGE
+    @Column(columnDefinition = "TEXT")
+    private String invoiceUrl; // MinIO URL for the generated PDF
+
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<OrderItem> items = new ArrayList<>();

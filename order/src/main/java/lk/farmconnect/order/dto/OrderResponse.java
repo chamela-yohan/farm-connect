@@ -18,6 +18,7 @@ public record OrderResponse(
         BigDecimal totalAmount,
         DeliveryMethod deliveryMethod,
         String parentOrderRef,
+        String invoiceUrl,
         String deliveryAddress,
         String buyerNotes,
         String farmerNotes,
