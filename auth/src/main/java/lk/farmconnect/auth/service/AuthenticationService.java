@@ -3,6 +3,7 @@ package lk.farmconnect.auth.service;
 import lk.farmconnect.auth.dto.*;
 import lk.farmconnect.auth.entity.RefreshToken;
 import lk.farmconnect.auth.repository.RefreshTokenRepository;
+import lk.farmconnect.common.exception.BusinessException;
 import lk.farmconnect.user.User;
 import lk.farmconnect.user.UserRepository;
 import lk.farmconnect.user.UserRole;
@@ -30,7 +31,7 @@ public class AuthenticationService {
     @Transactional
     public AuthResponse register(RegisterRequest request) {
         if (userRepository.existsByEmail(request.email())) {
-            throw new RuntimeException("Email already registered");
+            throw new BusinessException("Email already registered");
         }
 
         log.info("Registering new user: {}", request.email());
@@ -56,7 +57,7 @@ public class AuthenticationService {
         );
 
         User user = userRepository.findByEmail(request.email())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new BusinessException("User not found"));
 
         return generateAuthResponse(user);
     }
@@ -71,7 +72,7 @@ public class AuthenticationService {
     @Transactional
     public AuthResponse refreshToken(TokenRefreshRequest request) {
         RefreshToken refreshToken = refreshTokenRepository.findByToken(request.refreshToken())
-                .orElseThrow(() -> new RuntimeException("Refresh token not found in database"));
+                .orElseThrow(() -> new BusinessException("Refresh token not found in database"));
 
         refreshTokenService.verifyExpiration(refreshToken);
 
