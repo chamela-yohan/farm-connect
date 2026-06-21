@@ -41,7 +41,7 @@ public class InvoiceEventListener {
             );
 
             // Upload to MinIO
-            String invoiceUrl = fileStorageService.uploadFile(pdfFile, "invoices", false);
+            String invoiceUrl = fileStorageService.uploadDocument(pdfFile, "invoices");
 
             // Save URL to Database
             order.setInvoiceUrl(invoiceUrl);

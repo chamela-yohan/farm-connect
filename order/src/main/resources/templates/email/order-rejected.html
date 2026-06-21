@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body style="font-family: Arial, sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px;">
+<div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+
+    <!-- Header -->
+    <div style="background-color: #c0392b; color: #ffffff; padding: 20px; text-align: center;">
+        <h1 style="margin: 0; font-size: 24px;">FarmConnect</h1>
+        <p style="margin: 5px 0 0; font-size: 14px; opacity: 0.9;">Order Update Notification</p>
+    </div>
+
+    <!-- Content -->
+    <div style="padding: 30px;">
+        <h2 style="color: #c0392b; margin-top: 0;">Order Request Declined</h2>
+        <p style="font-size: 16px; color: #333333;">Hello <span th:text="${buyerName}">Buyer</span>,</p>
+        <p style="font-size: 16px; color: #333333;">Unfortunately, the farmer was unable to fulfill your order <strong th:text="${orderNumber}">ORD-123</strong> at this time.</p>
+
+        <div style="background-color: #fdf2f2; padding: 15px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #c0392b;">
+            <p style="margin: 0; font-size: 14px; color: #555555;"><strong>Reason provided by farmer:</strong></p>
+            <p style="margin: 10px 0 0; font-style: italic; color: #333333;" th:text="${rejectionReason}">No reason provided.</p>
+        </div>
+
+        <p style="font-size: 14px; color: #555555;">No charges have been applied. We encourage you to browse other available products in your area.</p>
+    </div>
+
+    <!-- Footer -->
+    <div style="background-color: #ecf0f1; padding: 15px; text-align: center; font-size: 12px; color: #7f8c8d;">
+        <p style="margin: 0;">Thank you for supporting local farmers.</p>
+        <p style="margin: 5px 0 0;">&copy; 2026 FarmConnect. All rights reserved.</p>
+    </div>
+</div>
+</body>
+</html>

@@ -5,6 +5,7 @@ import lk.farmconnect.common.exception.ResourceNotFoundException;
 import lk.farmconnect.order.dto.*;
 import lk.farmconnect.order.entity.*;
 import lk.farmconnect.order.event.OrderAcceptedEvent;
+import lk.farmconnect.order.event.OrderRejectedEvent;
 import lk.farmconnect.order.mapper.OrderMapper;
 import lk.farmconnect.order.repository.CartRepository;
 import lk.farmconnect.order.repository.OrderRepository;
@@ -144,6 +145,9 @@ public class OrderService {
                     Product product = item.getProduct();
                     product.setAvailableStock(product.getAvailableStock().add(item.getApprovedQty()));
                 }
+            }
+            if (request.newStatus() == OrderStatus.REJECTED) {
+                eventPublisher.publishEvent(new OrderRejectedEvent(this, order));
             }
         }
 

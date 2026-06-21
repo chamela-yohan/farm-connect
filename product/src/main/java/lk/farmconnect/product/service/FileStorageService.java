@@ -31,10 +31,12 @@ public class FileStorageService {
 
     private static final List<String> ALLOWED_IMAGE_TYPES = List.of("image/jpeg", "image/png", "image/webp");
     private static final List<String> ALLOWED_VIDEO_TYPES = List.of("video/mp4", "video/quicktime");
+    private static final List<String> ALLOWED_DOCUMENT_TYPES = List.of("application/pdf");
 
     // Max sizes in bytes (5MB for images, 50MB for videos)
     private static final long MAX_IMAGE_SIZE = 5 * 1024 * 1024;
     private static final long MAX_VIDEO_SIZE = 50 * 1024 * 1024;
+    private static final long MAX_DOCUMENT_SIZE = 10 * 1024 * 1024;
 
     @PostConstruct
     public void init() {
@@ -128,6 +130,45 @@ public class FileStorageService {
             if (file.getSize() > MAX_VIDEO_SIZE) {
                 throw new IllegalArgumentException("Video file size exceeds the 50MB limit.");
             }
+        }
+    }
+
+    // Generic Document Upload (For Invoice, etc.)
+    public String uploadDocument(MultipartFile file, String folder) {
+        // Validate Document
+        if (file == null || file.isEmpty()) {
+            throw new IllegalArgumentException("File cannot be empty.");
+        }
+        if (file.getContentType() == null || !ALLOWED_DOCUMENT_TYPES.contains(file.getContentType())) {
+            throw new IllegalArgumentException("Invalid document format. Allowed: PDF.");
+        }
+        if (file.getSize() > MAX_DOCUMENT_SIZE) {
+            throw new IllegalArgumentException("Document file size exceeds the 10MB limit.");
+        }
+
+        // Upload to MinIO
+        try {
+            String originalFilename = file.getOriginalFilename();
+            String extension = originalFilename != null && originalFilename.contains(".")
+                    ? originalFilename.substring(originalFilename.lastIndexOf("."))
+                    : ".pdf"; // Fallback extension for documents
+
+            String uniqueFilename = folder + "/" + UUID.randomUUID() + extension;
+
+            minioClient.putObject(
+                    PutObjectArgs.builder()
+                            .bucket(bucketName)
+                            .object(uniqueFilename)
+                            .stream(file.getInputStream(), file.getSize(), -1)
+                            .contentType(file.getContentType())
+                            .build()
+            );
+
+            return endpoint + "/" + bucketName + "/" + uniqueFilename;
+
+        } catch (Exception e) {
+            log.error("Error uploading document to MinIO", e);
+            throw new RuntimeException("Failed to upload document to storage.");
         }
     }
 }

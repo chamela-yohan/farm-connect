@@ -15,9 +15,13 @@ public interface OrderMapper {
     @Mapping(target = "unitPrice", source = "unitPriceSnapshot")
     OrderItemResponse toOrderItemResponse(OrderItem item);
 
+    // CONDITIONAL UNLOCKING: Only expose mobile numbers if status >= ACCEPTED
     @Mapping(target = "buyerId", source = "buyer.id")
     @Mapping(target = "buyerName", source = "buyer.name")
+    @Mapping(target = "buyerMobile", expression = "java(order.getStatus().compareTo(OrderStatus.ACCEPTED) >= 0 ? order.getBuyer().getMobileNumber() : null)")
+
     @Mapping(target = "farmerId", source = "farmer.id")
     @Mapping(target = "farmerName", source = "farmer.name")
+    @Mapping(target = "farmerMobile", expression = "java(order.getStatus().compareTo(OrderStatus.ACCEPTED) >= 0 ? order.getFarmer().getMobileNumber() : null)")
     OrderResponse toOrderResponse(Order order);
 }

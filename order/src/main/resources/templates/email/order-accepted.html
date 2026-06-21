@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body style="font-family: Arial, sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px;">
+<div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+
+    <!-- Header -->
+    <div style="background-color: #2c3e50; color: #ffffff; padding: 20px; text-align: center;">
+        <h1 style="margin: 0; font-size: 24px;">FarmConnect</h1>
+        <p style="margin: 5px 0 0; font-size: 14px; opacity: 0.9;">Order Update Notification</p>
+    </div>
+
+    <!-- Content -->
+    <div style="padding: 30px;">
+        <h2 style="color: #27ae60; margin-top: 0;">Great News! Your Order is Accepted.</h2>
+        <p style="font-size: 16px; color: #333333;">Hello <span th:text="${buyerName}">Buyer</span>,</p>
+        <p style="font-size: 16px; color: #333333;">A farmer has accepted your order <strong th:text="${orderNumber}">ORD-123</strong>.</p>
+
+        <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0;">
+            <p style="margin: 5px 0;"><strong>Total Amount:</strong> Rs. <span th:text="${totalAmount}">0.00</span></p>
+            <p style="margin: 5px 0;"><strong>Farmer:</strong> <span th:text="${farmerName}">Farmer Name</span></p>
+            <p style="margin: 5px 0;"><strong>Contact:</strong> <span th:text="${farmerMobile}">07X XXX XXXX</span></p>
+        </div>
+
+        <p style="font-size: 14px; color: #555555;">You can view and download your official invoice by clicking the button below:</p>
+
+        <div style="text-align: center; margin: 30px 0;">
+            <a th:href="${invoiceUrl}" style="background-color: #27ae60; color: #ffffff; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold; font-size: 16px;">Download Invoice</a>
+        </div>
+
+        <p style="font-size: 14px; color: #777777; margin-top: 30px;">Please contact the farmer directly using the phone number above to coordinate your delivery or pickup.</p>
+    </div>
+
+    <!-- Footer -->
+    <div style="background-color: #ecf0f1; padding: 15px; text-align: center; font-size: 12px; color: #7f8c8d;">
+        <p style="margin: 0;">Thank you for supporting local farmers during the Super El Nino crisis.</p>
+        <p style="margin: 5px 0 0;">&copy; 2026 FarmConnect. All rights reserved.</p>
+    </div>
+</div>
+</body>
+</html>
