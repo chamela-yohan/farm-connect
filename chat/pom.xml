@@ -47,6 +47,19 @@
             <artifactId>mapstruct</artifactId>
             <version>1.5.5.Final</version>
         </dependency>
+
+        <!-- Spring WebSocket & STOMP -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-websocket</artifactId>
+        </dependency>
+
+        <!-- Auth Module: To access JwtService for token validation -->
+        <dependency>
+            <groupId>lk.farmconnect</groupId>
+            <artifactId>auth</artifactId>
+            <version>${project.version}</version>
+        </dependency>
     </dependencies>
 
 

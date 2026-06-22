@@ -15,22 +15,35 @@ import java.io.IOException;
 @Component
 public class CustomAuthenticationEntryPoint implements AuthenticationEntryPoint {
 
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper;
+
+    public CustomAuthenticationEntryPoint(ObjectMapper objectMapper) {
+        this.objectMapper = objectMapper;
+    }
+
 
     @Override
     public void commence(HttpServletRequest request,
                          HttpServletResponse response,
                          AuthenticationException authException) throws IOException {
 
-        // Set HTTP Status to 401
         response.setStatus(HttpStatus.UNAUTHORIZED.value());
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
 
-        // Determine the best message based on the exception
-        String errorMessage = getString(authException);
+        String errorMessage = "Authentication required. Please provide a valid JWT token.";
 
-        // Write our standard ApiResponse to the output stream
+        if (authException != null && authException.getMessage() != null) {
+            String cause = authException.getMessage().toLowerCase();
+            if (cause.contains("expired")) {
+                errorMessage = "JWT token has expired. Please log in again.";
+            } else if (cause.contains("signature") || cause.contains("invalid") || cause.contains("format")) {
+                errorMessage = "Invalid or tampered JWT token.";
+            }
+        }
+
         ApiResponse<Void> apiResponse = ApiResponse.error(errorMessage);
+
+        // This will successfully serialize LocalDateTime!
         objectMapper.writeValue(response.getOutputStream(), apiResponse);
     }
 
