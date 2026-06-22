@@ -15,6 +15,7 @@
         <module>user</module>
         <module>product</module>
         <module>order</module>
+        <module>chat</module>
         <module>app</module>
     </modules>
 
