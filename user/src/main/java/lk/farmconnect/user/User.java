@@ -48,6 +48,12 @@ public class User implements UserDetails {
     private String address;
     private String city;
 
+    @Column(nullable = false)
+    private Double averageRating = 0.0;
+
+    @Column(nullable = false)
+    private Integer totalReviews = 0;
+
     @Column(nullable = false, updatable = false)
     private java.time.LocalDateTime createdAt;
 

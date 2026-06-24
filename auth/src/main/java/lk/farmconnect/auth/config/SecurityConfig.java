@@ -69,6 +69,8 @@ public class SecurityConfig {
                         .requestMatchers("/actuator/health").permitAll()
                         .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/products/**").permitAll()
                         .requestMatchers("/api/v1/products/public/**").permitAll()  // REDUNDANT
+                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/reviews/farmer/**").permitAll()
+                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/users/**").permitAll()
                         .requestMatchers("/ws-chat/**").permitAll()
                         .anyRequest().authenticated()
                 )

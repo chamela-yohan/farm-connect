@@ -16,6 +16,7 @@
         <module>product</module>
         <module>order</module>
         <module>chat</module>
+        <module>review</module>
         <module>app</module>
     </modules>
 
