@@ -1,6 +1,7 @@
 package lk.farmconnect.chat.config;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.simp.config.ChannelRegistration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
@@ -14,6 +15,9 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     private final WebSocketAuthInterceptor webSocketAuthInterceptor;
+
+    @Value("${app.cors.allowed-origins}")
+    private String allowedOrigins;
 
     @Override
     public void configureMessageBroker(MessageBrokerRegistry config) {
@@ -31,10 +35,10 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         registry.addEndpoint("/ws-chat")
-                // ️ PRODUCTION SECURITY: We need to replace "*" with your actual Next.js frontend URL (e.g., "https://farmconnect.lk")
-                .setAllowedOriginPatterns("*");
-                // SockJS fallback ensures WebSockets work even if strict corporate firewalls block them
-              //  .withSockJS();
+                // Split the comma-separated string into an array
+                .setAllowedOriginPatterns(allowedOrigins.split(","));
+        // SockJS fallback ensures WebSockets work even if strict corporate firewalls block them
+        //  .withSockJS();
     }
 
     @Override
