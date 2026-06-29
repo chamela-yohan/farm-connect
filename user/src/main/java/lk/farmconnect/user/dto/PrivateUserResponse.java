@@ -11,9 +11,11 @@ public record PrivateUserResponse(
         String mobileNumber,
         UserRole role,
         String profilePictureUrl,
+        boolean profileComplete,
         Double lat,
         Double lon,
         String address,
         String city,
-        LocalDateTime createdAt
+        LocalDateTime createdAt,
+        LocalDateTime updatedAt
 ) {}

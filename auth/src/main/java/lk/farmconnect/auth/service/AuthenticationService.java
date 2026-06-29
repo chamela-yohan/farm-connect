@@ -98,12 +98,16 @@ public class AuthenticationService {
     }
 
     private AuthResponse.UserInfo mapToUserInfo(User user) {
+
+        boolean isProfileComplete = user.getMobileNumber() != null && !user.getMobileNumber().trim().isEmpty();
+
         return new AuthResponse.UserInfo(
                 user.getId(),
                 user.getName(),
                 user.getEmail(),
                 user.getRole(),
-                user.getProfilePictureUrl()
+                user.getProfilePictureUrl(),
+                isProfileComplete
         );
     }
 }

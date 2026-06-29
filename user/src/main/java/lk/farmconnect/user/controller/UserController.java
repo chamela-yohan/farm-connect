@@ -3,6 +3,7 @@ package lk.farmconnect.user.controller;
 import jakarta.validation.Valid;
 import lk.farmconnect.common.response.ApiResponse;
 import lk.farmconnect.user.User;
+import lk.farmconnect.user.dto.ProfileUpdateRequest;
 import lk.farmconnect.user.dto.PublicUserResponse;
 import lk.farmconnect.user.dto.UserCreateRequest;
 import lk.farmconnect.user.dto.PrivateUserResponse;
@@ -42,6 +43,17 @@ public class UserController {
             @PathVariable("id") UUID id) {
 
         PublicUserResponse response = userService.getPublicProfile(id);
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    @PutMapping("/profile")
+    public ResponseEntity<ApiResponse<PrivateUserResponse>> updateProfile(
+            @Valid @RequestBody ProfileUpdateRequest request,
+            @AuthenticationPrincipal User currentUser) {
+
+        log.info("Profile update request for user: {}", currentUser.getEmail());
+
+        PrivateUserResponse response = userService.updateProfile(currentUser.getId(), request);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 

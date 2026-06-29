@@ -3,6 +3,7 @@ package lk.farmconnect.user.service;
 import lk.farmconnect.common.exception.ResourceNotFoundException;
 import lk.farmconnect.user.User;
 import lk.farmconnect.user.UserRepository;
+import lk.farmconnect.user.dto.ProfileUpdateRequest;
 import lk.farmconnect.user.dto.PublicUserResponse;
 import lk.farmconnect.user.dto.UserCreateRequest;
 import lk.farmconnect.user.dto.PrivateUserResponse;
@@ -72,9 +73,19 @@ public class UserService {
         Double lon = user.getLocation() != null ? user.getLocation().getX() : null;
 
         return new PrivateUserResponse(
-                user.getId(), user.getName(), user.getEmail(), user.getMobileNumber(),
-                user.getRole(), user.getProfilePictureUrl(), lat, lon,
-                user.getAddress(), user.getCity(), user.getCreatedAt()
+                user.getId(),
+                user.getName(),
+                user.getEmail(),
+                user.getMobileNumber(),
+                user.getRole(),
+                user.getProfilePictureUrl(),
+                user.getMobileNumber() != null && !user.getMobileNumber().trim().isEmpty(), // Compute profileComplete
+                lat,
+                lon,
+                user.getAddress(),
+                user.getCity(),
+                user.getCreatedAt(),
+                user.getUpdatedAt()
         );
     }
 
@@ -87,5 +98,20 @@ public class UserService {
                 user.getProfilePictureUrl(),
                 user.getCity()
         );
+    }
+
+    @Transactional
+    public PrivateUserResponse updateProfile(UUID userId, ProfileUpdateRequest request) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        log.info("Updating profile for user: {}", user.getEmail());
+
+        user.setMobileNumber(request.mobileNumber());
+        user.setRole(request.role());
+
+        User updatedUser = userRepository.save(user);
+
+        return mapToPrivateResponse(updatedUser); // Reuse existing mapper
     }
 }

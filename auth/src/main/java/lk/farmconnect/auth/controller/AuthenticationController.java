@@ -32,10 +32,9 @@ public class AuthenticationController {
     }
 
     @PostMapping("/google")
-    public ResponseEntity<ApiResponse<AuthResponse>> googleLogin(
-            @Valid @RequestBody GoogleLoginRequest request) {
-        log.info("Google login request");
-        return ResponseEntity.ok(ApiResponse.success(authService.loginWithGoogle(request)));
+    public ResponseEntity<ApiResponse<AuthResponse>> googleLogin(@RequestBody GoogleLoginRequest request) {
+        AuthResponse response = authService.loginWithGoogle(request);
+        return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @PostMapping("/refresh")

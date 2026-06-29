@@ -14,6 +14,7 @@ public record AuthResponse(
             String name,
             String email,
             UserRole role,
-            String profilePictureUrl
+            String profilePictureUrl,
+            boolean profileComplete
     ){}
 }
