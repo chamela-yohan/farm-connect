@@ -39,7 +39,7 @@ public class ProductController {
     @GetMapping("/search")
     public ResponseEntity<ApiResponse<Page<ProductResponse>>> searchProducts(
             @ModelAttribute ProductSearchCriteria criteria
-    ){
+    ) {
         System.out.println("Inside search products");
         Page<ProductResponse> results = productSearchService.searchProducts(criteria);
         return ResponseEntity.ok(ApiResponse.success(results));
@@ -89,6 +89,12 @@ public class ProductController {
 
         productService.softDeleteProduct(id, farmer.getId());
         return ResponseEntity.ok(ApiResponse.success("Product deleted successfully"));
+    }
+
+    @GetMapping("/categories")
+    public ResponseEntity<ApiResponse<List<String>>> getCategories() {
+        List<String> categories = productSearchService.getDistinctCategories();
+        return ResponseEntity.ok(ApiResponse.success(categories));
     }
 
 }

@@ -12,7 +12,8 @@ public record ProductSearchCriteria(
         Integer page,
         Integer size,
         String sortBy,
-        String sortDir
+        String sortDir,
+        String category
 ) {
     public ProductSearchCriteria {
         if (page == null || page < 0) page = 0;

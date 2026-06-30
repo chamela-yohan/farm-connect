@@ -12,32 +12,26 @@ public class ProductSpecification {
 
     public static Specification<Product> buildSpecification(ProductSearchCriteria criteria) {
         return (root, query, criteriaBuilder) -> {
-
-            // Base Predicates: Always ensure we only show active, non-deleted products
-            // This is crucial when using the standard findAll(Specification, Pageable) method
             var predicates = criteriaBuilder.conjunction();
 
+            // Base: Active, non-deleted products
             predicates = criteriaBuilder.and(predicates,
                     criteriaBuilder.isFalse(root.get("isDeleted")));
             predicates = criteriaBuilder.and(predicates,
                     criteriaBuilder.equal(root.get("status"), ProductStatus.ACTIVE));
 
-            // Dynamic Keyword Search (Case-Insensitive)
-            // Searches in BOTH title and description
+            // Keyword search
             if (criteria.keyword() != null && !criteria.keyword().isBlank()) {
                 String likePattern = "%" + criteria.keyword().toLowerCase() + "%";
-
                 var titlePredicate = criteriaBuilder.like(
                         criteriaBuilder.lower(root.get("title")), likePattern);
                 var descPredicate = criteriaBuilder.like(
                         criteriaBuilder.lower(root.get("description")), likePattern);
-
-                // Combine with OR: title LIKE '%keyword%' OR description LIKE '%keyword%'
                 predicates = criteriaBuilder.and(predicates,
                         criteriaBuilder.or(titlePredicate, descPredicate));
             }
 
-            // Dynamic Price Filtering
+            // Price filtering
             if (criteria.minPrice() != null) {
                 predicates = criteriaBuilder.and(predicates,
                         criteriaBuilder.greaterThanOrEqualTo(root.get("price"), criteria.minPrice()));
@@ -46,6 +40,29 @@ public class ProductSpecification {
             if (criteria.maxPrice() != null) {
                 predicates = criteriaBuilder.and(predicates,
                         criteriaBuilder.lessThanOrEqualTo(root.get("price"), criteria.maxPrice()));
+            }
+
+            // Category filtering (JSON attributes)
+            if (criteria.category() != null && !criteria.category().isBlank()) {
+                predicates = criteriaBuilder.and(predicates,
+                        criteriaBuilder.equal(
+                                criteriaBuilder.function("jsonb_extract_path_text", String.class,
+                                        root.get("attributes"), criteriaBuilder.literal("category")),
+                                criteria.category()
+                        ));
+            }
+
+            // Location-based radius filtering (PostGIS)
+            if (criteria.lat() != null && criteria.lon() != null && criteria.radiusKm() != null) {
+                double radiusMeters = criteria.radiusKm() * 1000;
+                predicates = criteriaBuilder.and(predicates,
+                        criteriaBuilder.lessThanOrEqualTo(
+                                criteriaBuilder.function("ST_Distance", Double.class,
+                                        root.get("farmer").get("location"),
+                                        criteriaBuilder.function("ST_GeogFromText", Object.class,
+                                                criteriaBuilder.literal("POINT(" + criteria.lon() + " " + criteria.lat() + ")"))),
+                                radiusMeters
+                        ));
             }
 
             return predicates;

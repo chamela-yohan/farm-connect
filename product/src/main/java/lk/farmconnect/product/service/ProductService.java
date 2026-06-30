@@ -127,5 +127,10 @@ public class ProductService {
         productRepository.save(product);
         log.info("Product {} soft-deleted by farmer {}", productId, requestingFarmerId);
     }
+    @Transactional(readOnly = true)
+    public List<String> getDistinctCategories() {
+        // Extract distinct categories from the JSON attributes column
+        return productRepository.findDistinctCategories();
+    }
 
 }

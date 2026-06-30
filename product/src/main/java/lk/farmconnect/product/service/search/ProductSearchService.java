@@ -47,6 +47,14 @@ public class ProductSearchService {
 
     }
 
+    // Get distinct categories
+    @Transactional(readOnly = true)
+    @Cacheable(value = "productCategories")
+    public List<String> getDistinctCategories() {
+        log.info("Fetching distinct categories");
+        return productRepository.findDistinctCategories();
+    }
+
 
     // ==========================================
     // Helpers

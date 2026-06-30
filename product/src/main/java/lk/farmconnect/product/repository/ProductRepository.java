@@ -12,6 +12,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -55,5 +56,17 @@ public interface ProductRepository extends JpaRepository<Product, UUID>, JpaSpec
 
     @EntityGraph(attributePaths = {"farmer"})
     Page<Product> findAll(org.springframework.data.jpa.domain.Specification<Product> spec, Pageable pageable);
+
+
+    // Extract distinct categories from JSON attributes
+    @Query(value = """
+            SELECT DISTINCT attributes->>'category' as category 
+            FROM products 
+            WHERE is_deleted = false 
+            AND status = 'ACTIVE'
+            AND attributes->>'category' IS NOT NULL
+            ORDER BY category
+            """, nativeQuery = true)
+    List<String> findDistinctCategories();
 
 }

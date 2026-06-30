@@ -4,6 +4,7 @@ import lk.farmconnect.product.entity.ProductStatus;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -20,6 +21,8 @@ public record ProductResponse(
         BigDecimal deliveryFee,
         LocalDate expiryDate,
         BigDecimal price,
+        List<String> imageUrls,
+        String videoUrl,
         Map<String, Object> attributes,
         ProductStatus status,
         UUID farmerId,
