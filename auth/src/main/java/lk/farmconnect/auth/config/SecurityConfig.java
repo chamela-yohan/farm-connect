@@ -65,13 +65,19 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeHttpRequests(auth -> auth
+                        //  Public endpoints
                         .requestMatchers("/api/v1/auth/**").permitAll()
                         .requestMatchers("/actuator/health").permitAll()
                         .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/products/**").permitAll()
-                        .requestMatchers("/api/v1/products/public/**").permitAll()  // REDUNDANT
                         .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/reviews/farmer/**").permitAll()
-                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/users/**").permitAll()
                         .requestMatchers("/ws-chat/**").permitAll()
+
+                        //  SPECIFIC AUTHENTICATED ENDPOINTS (Must come BEFORE wildcards!)
+                        .requestMatchers("/api/v1/users/me").authenticated()
+                        .requestMatchers("/api/v1/users/profile").authenticated()
+                        .requestMatchers("/api/v1/users/profile-picture").authenticated()
+
+                        //  Everything else requires authentication
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session ->

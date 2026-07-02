@@ -1,4 +1,4 @@
-package lk.farmconnect.config;
+package lk.farmconnect.common.config;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;

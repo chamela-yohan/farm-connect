@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -23,12 +24,17 @@ public class GlobalExceptionHandler {
 
     //  Handle Validation Errors (e.g., @Email, @NotBlank, @Positive)
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ApiResponse<Void>> handleValidationExceptions(MethodArgumentNotValidException ex) {
-        String errorMessage = ex.getBindingResult().getFieldErrors().stream()
-                .map(error -> error.getField() + ": " + error.getDefaultMessage())
-                .collect(Collectors.joining(", "));
+    public ResponseEntity<ApiResponse<String>> handleValidationExceptions(MethodArgumentNotValidException ex) {
+        StringBuilder errors = new StringBuilder();
+        ex.getBindingResult().getAllErrors().forEach((error) -> {
+            String fieldName = ((FieldError) error).getField();
+            String errorMessage = error.getDefaultMessage();
+            errors.append(fieldName).append(": ").append(errorMessage).append("; ");
+        });
 
-        return ResponseEntity.badRequest().body(ApiResponse.error(errorMessage));
+        log.error("Validation failed: {}", errors);
+
+        return ResponseEntity.badRequest().body(ApiResponse.error(errors.toString()));
     }
 
     @ExceptionHandler(AuthenticationException.class)
@@ -132,4 +138,5 @@ public class GlobalExceptionHandler {
                 ApiResponse.error(ex.getMessage())
         );
     }
+
 }

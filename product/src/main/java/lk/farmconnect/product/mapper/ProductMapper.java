@@ -2,7 +2,7 @@ package lk.farmconnect.product.mapper;
 
 import lk.farmconnect.product.dto.ProductResponse;
 import lk.farmconnect.product.entity.Product;
-import lk.farmconnect.product.service.StorageService;
+import lk.farmconnect.common.service.StorageService;
 import lombok.extern.slf4j.Slf4j;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;

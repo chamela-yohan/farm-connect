@@ -5,9 +5,19 @@ import jakarta.validation.constraints.NotNull;
 import lk.farmconnect.user.UserRole;
 
 public record ProfileUpdateRequest(
+
+        @NotBlank(message = "Name is required")
+        String name,
+
         @NotBlank(message = "Mobile number is required")
         String mobileNumber,
 
-        @NotNull(message = "Role is required")
-        UserRole role
+        String address,
+        String city,
+
+
+        Double latitude,
+        Double longitude,
+
+        String profilePictureUrl
 ) {}
