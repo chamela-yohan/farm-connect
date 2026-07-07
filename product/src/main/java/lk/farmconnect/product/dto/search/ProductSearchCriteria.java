@@ -1,25 +1,26 @@
 package lk.farmconnect.product.dto.search;
 
-import java.math.BigDecimal;
+import lk.farmconnect.product.entity.ProductType;
 
 public record ProductSearchCriteria(
+        String keyword,
+        String category,
+        ProductType productType, // NEW
         Double lat,
         Double lon,
         Double radiusKm,
-        String keyword,
-        BigDecimal minPrice,
-        BigDecimal maxPrice,
+        Double minPrice,
+        Double maxPrice,
         Integer page,
         Integer size,
         String sortBy,
         String sortDir,
-        String category
+        Boolean isDeliveryAvailable
 ) {
     public ProductSearchCriteria {
-        if (page == null || page < 0) page = 0;
-        if (size == null || size <= 0 || size > 50) size = 20; // Strict pagination limit (Prevents DoS)
-        if (radiusKm == null || radiusKm <= 0) radiusKm = 15.0; // Default 15km radius
-        if (sortBy == null || sortBy.isBlank()) sortBy = "createdAt";
-        if (sortDir == null || sortDir.isBlank()) sortDir = "desc";
+        if (page == null) page = 0;
+        if (size == null) size = 12;
+        if (radiusKm == null) radiusKm = 50.0;
+        if (sortDir == null) sortDir = "DESC";
     }
 }

@@ -3,6 +3,7 @@ package lk.farmconnect.common.exception;
 import lk.farmconnect.common.response.ApiResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.FieldError;
@@ -14,6 +15,7 @@ import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.multipart.MultipartException;
 import org.springframework.web.multipart.support.MissingServletRequestPartException;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.web.server.ResponseStatusException;
 
 import javax.smartcardio.CardException;
 import java.util.stream.Collectors;
@@ -55,10 +57,10 @@ public class GlobalExceptionHandler {
     }
 
     //  Handle File Size Limits
-    @ExceptionHandler(MaxUploadSizeExceededException.class)
-    public ResponseEntity<ApiResponse<Void>> handleMaxUploadSizeExceededException(MaxUploadSizeExceededException ex) {
+    @ExceptionHandler(FileUploadException.class)
+    public ResponseEntity<ApiResponse<Void>> handleFileUploadException(FileUploadException ex) {
         return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)
-                .body(ApiResponse.error("File size exceeds the maximum allowed limit."));
+                .body(ApiResponse.error(ex.getMessage()));
     }
 
     //  Handle Custom File Upload Errors (From our FileStorageService)
@@ -137,6 +139,20 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(
                 ApiResponse.error(ex.getMessage())
         );
+    }
+
+    // Response
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<ApiResponse<Void>> handleResponseStatusException(ResponseStatusException ex) {
+        HttpStatusCode status = ex.getStatusCode();
+
+        // Extract the error message (e.g., "Authentication required")
+        String errorMessage = ex.getMessage() != null ? ex.getMessage() : "An unexpected error occurred";
+
+        // Return the response with the correct status and message
+        return ResponseEntity
+                .status(status)
+                .body(ApiResponse.error(errorMessage));
     }
 
 }

@@ -1,5 +1,6 @@
 package lk.farmconnect.product.entity;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.persistence.*;
 import lk.farmconnect.user.User;
 import lombok.*;
@@ -7,10 +8,11 @@ import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 @Entity
@@ -31,64 +33,83 @@ public class Product {
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal price;
 
-    @JdbcTypeCode(SqlTypes.JSON)
-    @Column(columnDefinition = "jsonb")
-    private Map<String, Object> attributes; // e.g., {"weight_kg": 5, "expiry_date": "2026-07-01"}
-
-    @Version // Optimistic looking; Prevents race conditions when two buyers buy the last stock
-    private Integer version;
-
-    @Column(precision = 10, scale = 2) // Actual trading rules
-    private BigDecimal availableStock; // Current live stock
-
-    @Column(precision = 10, scale = 2)
-    private BigDecimal minOrderQty; // e.g., 1.0 kg
-
-    @Column(precision = 10, scale = 2)
-    private BigDecimal maxOrderQty; // e.g., 10.0 kg
-
-    @Column(precision = 10, scale = 2)
-    private BigDecimal qtyStep;        // e.g., 0.5 kg increments
-
-    // DELIVERY CAPABILITY
-    @Column(nullable = false)
-    private boolean isDeliveryAvailable; // True if farmer can deliver, False for pickup only
-
-    @Column(precision = 10, scale = 2)
-    private BigDecimal deliveryFee; // Fee charged if buyer selects DELIVERY
-
-    private LocalDate expiryDate; // Null for non-perishables (like tractors)
+    @Enumerated(EnumType.STRING)
+    @Column(name = "product_type", nullable = false)
+    private ProductType productType;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private ProductStatus status;
+    @Builder.Default
+    private ProductStatus status = ProductStatus.ACTIVE;
 
-    @Column(nullable = false)
-    private boolean isDeleted = false;
+    // Common Trading Rules
+    @Column(name = "min_order_qty", precision = 10, scale = 2)
+    private BigDecimal minOrderQty;
 
+    @Column(name = "max_order_qty", precision = 10, scale = 2)
+    private BigDecimal maxOrderQty;
+
+    @Column(name = "qty_step", precision = 10, scale = 2)
+    private BigDecimal qtyStep;
+
+    // Delivery
+    @Column(name = "is_delivery_available")
+    private boolean isDeliveryAvailable = false;
+
+    @Column(name = "delivery_fee", precision = 10, scale = 2)
+    private BigDecimal deliveryFee;
+
+    // JSONB Attributes (Stock, Unit, Expiry, Rental Rules, etc.)
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(columnDefinition = "jsonb")
+    private JsonNode attributes;
+
+    // Media
+    @Column(name = "video_url")
+    private String videoUrl;
+
+    // Relationships
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "farmer_id", nullable = false)
     private User farmer;
 
-    @ElementCollection(fetch = FetchType.EAGER)
-    @CollectionTable(name = "product_images", joinColumns = @JoinColumn(name = "product_id"))
-    @Column(name = "image_url", nullable = false)
-    private List<String> imageUrls;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "category_id")
+    private Category category;
 
-    // Optional video
-    @Column(name = "video_url")
-    private String videoUrl;
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<ProductImage> images = new ArrayList<>();
 
-    @Column(nullable = false, updatable = false)
+    // Multiple Locations (References the City table)
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private Set<ProductLocation> locations = new HashSet<>();
+
+    // Delivery Areas (Set of District IDs)
+    @ElementCollection(fetch = FetchType.LAZY)
+    @CollectionTable(name = "product_delivery_areas", joinColumns = @JoinColumn(name = "product_id"))
+    @Column(name = "district_id")
+    @Builder.Default
+    private Set<Integer> deliveryDistrictIds = new HashSet<>();
+
+    // Metadata & Optimistic Locking
+    @Column(name = "is_deleted")
+    private boolean isDeleted = false;
+
+    @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
+    @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    @Version
+    private Integer version;
 
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
-        if (status == null) status = ProductStatus.ACTIVE;
     }
 
     @PreUpdate

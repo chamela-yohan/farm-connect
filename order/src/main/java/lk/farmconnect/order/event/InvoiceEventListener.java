@@ -1,10 +1,10 @@
 package lk.farmconnect.order.event;
 
+import lk.farmconnect.common.service.StorageService;
 import lk.farmconnect.common.util.ByteArrayMultipartFile;
 import lk.farmconnect.order.entity.Order;
 import lk.farmconnect.order.repository.OrderRepository;
 import lk.farmconnect.order.service.InvoiceService;
-import lk.farmconnect.product.service.FileStorageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
@@ -18,7 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class InvoiceEventListener {
 
     private final InvoiceService invoiceService;
-    private final FileStorageService fileStorageService;
+    private final StorageService storageService; // Changed from FileStorageService
     private final OrderRepository orderRepository;
 
     @Async
@@ -40,14 +40,17 @@ public class InvoiceEventListener {
                     "application/pdf"
             );
 
-            // Upload to MinIO
-            String invoiceUrl = fileStorageService.uploadDocument(pdfFile, "invoices");
+            // Upload using StorageService with DOCUMENT type
+            String invoiceKey = storageService.uploadFile(pdfFile, "invoices", StorageService.FileType.DOCUMENT);
+
+            // Generate presigned URL for the invoice
+            String invoiceUrl = storageService.getPresignedUrl(invoiceKey);
 
             // Save URL to Database
             order.setInvoiceUrl(invoiceUrl);
             orderRepository.save(order);
 
-            log.info("Invoice successfully uploaded to MinIO for order {}", order.getOrderNumber());
+            log.info("Invoice successfully uploaded to S3 for order {}", order.getOrderNumber());
 
         } catch (Exception e) {
             log.error("Failed to generate/upload invoice for order {}", order.getOrderNumber(), e);

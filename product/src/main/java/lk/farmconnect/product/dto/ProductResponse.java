@@ -1,33 +1,51 @@
 package lk.farmconnect.product.dto;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import lk.farmconnect.product.entity.ProductStatus;
+import lk.farmconnect.product.entity.ProductType;
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 public record ProductResponse(
         UUID id,
         String title,
         String description,
-        Integer version,
-        BigDecimal availableStock,
+        BigDecimal price,
+        ProductType productType,
+        ProductStatus status,
+
         BigDecimal minOrderQty,
         BigDecimal maxOrderQty,
         BigDecimal qtyStep,
+
         boolean isDeliveryAvailable,
         BigDecimal deliveryFee,
-        LocalDate expiryDate,
-        BigDecimal price,
-        List<String> imageUrls,
-        String videoUrl,
-        Map<String, Object> attributes,
-        ProductStatus status,
+
+        UUID categoryId,
+        String categoryName,
+
+        JsonNode attributes,
+
+        List<String> imageUrls, // Presigned URLs
+        String videoUrl,        // Presigned URL
+
+        List<LocationDetail> locations,
+        Set<Integer> deliveryDistrictIds,
+
         UUID farmerId,
         String farmerName,
+
+        Integer version, // For optimistic locking
         LocalDateTime createdAt,
-        Double lat,
-        Double lon
-) {}
+        LocalDateTime updatedAt
+) {
+    public record LocationDetail(
+            Integer cityId,
+            String cityName,
+            Integer districtId,
+            String districtName // Can be resolved by frontend using the 25 districts list
+    ) {}
+}

@@ -9,11 +9,13 @@ import lk.farmconnect.user.UserRepository;
 import lk.farmconnect.user.UserRole;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 @Slf4j
 @Service
@@ -71,10 +73,16 @@ public class AuthenticationService {
 
     @Transactional
     public AuthResponse refreshToken(TokenRefreshRequest request) {
-        RefreshToken refreshToken = refreshTokenRepository.findByToken(request.refreshToken())
-                .orElseThrow(() -> new BusinessException("Refresh token not found in database"));
 
-        refreshTokenService.verifyExpiration(refreshToken);
+        // Throw 401 if refresh token is not found
+        RefreshToken refreshToken = refreshTokenRepository.findByToken(request.refreshToken())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Refresh token not found"));
+
+        try {
+            refreshTokenService.verifyExpiration(refreshToken);
+        } catch (RuntimeException e) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Refresh token expired. Please login again.");
+        }
 
         User user = refreshToken.getUser();
         String newAccessToken = jwtService.generateToken(user);

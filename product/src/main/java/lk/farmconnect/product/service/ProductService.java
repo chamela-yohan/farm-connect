@@ -4,11 +4,16 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
+import lk.farmconnect.common.entity.City;
 import lk.farmconnect.common.exception.ResourceNotFoundException;
+import lk.farmconnect.common.repository.CityRepository;
+import lk.farmconnect.common.service.StorageService;
 import lk.farmconnect.product.dto.ProductCreateRequest;
 import lk.farmconnect.product.dto.ProductResponse;
-import lk.farmconnect.product.entity.Product;
+import lk.farmconnect.product.dto.ProductUpdateRequest;
+import lk.farmconnect.product.entity.*;
 import lk.farmconnect.product.mapper.ProductMapper;
+import lk.farmconnect.product.repository.CategoryRepository;
 import lk.farmconnect.product.repository.ProductRepository;
 import lk.farmconnect.user.User;
 import lk.farmconnect.user.UserRepository;
@@ -32,11 +37,13 @@ public class ProductService {
 
     private final ProductRepository productRepository;
     private final UserRepository userRepository;
-    private final FileStorageService fileStorageService;
+    private final CategoryRepository categoryRepository;
+    private final CityRepository cityRepository; // From common module
+
+    private final StorageService storageService;
     private final ObjectMapper objectMapper;
     private final Validator validator;
     private final ProductMapper productMapper;
-
 
     @Transactional
     public ProductResponse createProduct(String productJson,
@@ -44,15 +51,14 @@ public class ProductService {
                                          MultipartFile video,
                                          UUID farmerId) {
 
-        // Safely Parse the JSON String
+        // 1. Parse and Validate JSON
         ProductCreateRequest request;
         try {
             request = objectMapper.readValue(productJson, ProductCreateRequest.class);
         } catch (JsonProcessingException e) {
-            throw new IllegalArgumentException("Invalid product JSON format. Please check your syntax.");
+            throw new IllegalArgumentException("Invalid product JSON format");
         }
 
-        // Manually Trigger Validation
         Set<ConstraintViolation<ProductCreateRequest>> violations = validator.validate(request);
         if (!violations.isEmpty()) {
             String errorMessage = violations.stream()
@@ -61,49 +67,68 @@ public class ProductService {
             throw new IllegalArgumentException("Validation failed: " + errorMessage);
         }
 
-        // Strict File Validation
         if (images == null || images.isEmpty()) {
-            throw new IllegalArgumentException("At least one product image is required.");
+            throw new IllegalArgumentException("At least one product image is required");
         }
 
-        // Upload Files to MinIO
-        List<String> imageUrls = images.stream()
-                .map(img -> fileStorageService.uploadFile(img, "products/images", true))
+        // 2. Upload Media
+        List<String> imageKeys = images.stream()
+                .map(img -> storageService.uploadFile(img, "products/images", StorageService.FileType.IMAGE))
                 .toList();
 
-        String videoUrl = null;
+        String videoKey = null;
         if (video != null && !video.isEmpty()) {
-            videoUrl = fileStorageService.uploadFile(video, "products/videos", false);
+            videoKey = storageService.uploadFile(video, "products/videos", StorageService.FileType.VIDEO);
         }
 
-        // Save Product to Database
+        // 3. Fetch Relationships
         User farmer = userRepository.findById(farmerId)
-                .orElseThrow(() -> new RuntimeException("Farmer not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Farmer not found"));
 
-        Product product = Product.builder()
-                .title(request.title())
-                .description(request.description())
-                .price(request.price())
-                .attributes(request.attributes())
-                .availableStock(request.availableStock())
-                .minOrderQty(request.minOrderQty())
-                .maxOrderQty(request.maxOrderQty())
-                .qtyStep(request.qtyStep())
-                .isDeliveryAvailable(request.isDeliveryAvailable())
-                .expiryDate(request.expiryDate())
-                .farmer(farmer)
-                .imageUrls(imageUrls)
-                .videoUrl(videoUrl)
-                .build();
+        Category category = categoryRepository.findById(request.categoryId())
+                .orElseThrow(() -> new ResourceNotFoundException("Category not found"));
 
-        Product saved = productRepository.save(product);
-        return productMapper.toResponse(saved);
-    }
+        // 4. Map to Entity
+        Product product = productMapper.toEntity(request);
+        product.setFarmer(farmer);
+        product.setCategory(category);
+        product.setVideoUrl(videoKey);
 
-    @Transactional(readOnly = true)
-    public Page<ProductResponse> getAllActiveProducts(Pageable pageable) {
-        return productRepository.findByIsDeletedFalse(pageable)
-                .map(productMapper::toResponse);
+        // 5. Handle Delivery Areas (Set of District IDs)
+        if (request.deliveryDistrictIds() != null) {
+            product.setDeliveryDistrictIds(request.deliveryDistrictIds());
+        }
+
+        // 6. Handle Product Locations (Multiple Cities)
+        if (request.locationCityIds() != null && !request.locationCityIds().isEmpty()) {
+            Set<ProductLocation> locations = request.locationCityIds().stream()
+                    .map(cityId -> {
+                        City city = cityRepository.findById(cityId)
+                                .orElseThrow(() -> new ResourceNotFoundException("City not found with ID: " + cityId));
+                        return ProductLocation.builder()
+                                .product(product)
+                                .city(city)
+                                .build();
+                    })
+                    .collect(Collectors.toSet());
+            product.setLocations(locations);
+        }
+
+        // 7. Handle Images
+        List<ProductImage> productImages = imageKeys.stream()
+                .map(key -> ProductImage.builder()
+                        .product(product)
+                        .imageUrl(key)
+                        .displayOrder(imageKeys.indexOf(key))
+                        .build())
+                .collect(Collectors.toList());
+        product.setImages(productImages);
+
+        // 8. Save and Return
+        Product savedProduct = productRepository.save(product);
+        log.info("Product created successfully: {} by farmer {}", savedProduct.getId(), farmerId);
+
+        return productMapper.toResponse(savedProduct);
     }
 
     @Transactional(readOnly = true)
@@ -113,11 +138,22 @@ public class ProductService {
         return productMapper.toResponse(product);
     }
 
-    // Security: Ensure only the owner can delete
+    @Transactional(readOnly = true)
+    public Page<ProductResponse> getAllActiveProducts(Pageable pageable) {
+        return productRepository.findByIsDeletedFalse(pageable)
+                .map(productMapper::toResponse);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<ProductResponse> getFarmerProducts(UUID farmerId, Pageable pageable) {
+        return productRepository.findByFarmerIdAndIsDeletedFalse(farmerId, pageable)
+                .map(productMapper::toResponse);
+    }
+
     @Transactional
     public void softDeleteProduct(UUID productId, UUID requestingFarmerId) {
         Product product = productRepository.findByIdAndIsDeletedFalse(productId)
-                .orElseThrow(() -> new ResourceNotFoundException("Product not found with ID: " + productId));
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
 
         if (!product.getFarmer().getId().equals(requestingFarmerId)) {
             throw new SecurityException("You do not have permission to delete this product");
@@ -127,10 +163,64 @@ public class ProductService {
         productRepository.save(product);
         log.info("Product {} soft-deleted by farmer {}", productId, requestingFarmerId);
     }
-    @Transactional(readOnly = true)
-    public List<String> getDistinctCategories() {
-        // Extract distinct categories from the JSON attributes column
-        return productRepository.findDistinctCategories();
+
+    @Transactional
+    public ProductResponse updateProduct(UUID productId, String productJson, UUID farmerId) {
+        Product product = productRepository.findByIdAndIsDeletedFalse(productId)
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
+
+        if (!product.getFarmer().getId().equals(farmerId)) {
+            throw new SecurityException("You don't have permission to update this product");
+        }
+
+        ProductUpdateRequest request;
+        try {
+            request = objectMapper.readValue(productJson, ProductUpdateRequest.class);
+        } catch (JsonProcessingException e) {
+            throw new IllegalArgumentException("Invalid product JSON format");
+        }
+
+        // Update basic fields
+        productMapper.updateEntity(product, request);
+
+        // Update Category if changed
+        if (request.categoryId() != null) {
+            Category category = categoryRepository.findById(request.categoryId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Category not found"));
+            product.setCategory(category);
+        }
+
+        // Update Delivery Areas if provided
+        if (request.deliveryDistrictIds() != null) {
+            product.setDeliveryDistrictIds(request.deliveryDistrictIds());
+        }
+
+        // Update Locations if provided
+        if (request.locationCityIds() != null) {
+            product.getLocations().clear(); // Clear old locations
+            if (!request.locationCityIds().isEmpty()) {
+                Set<ProductLocation> newLocations = request.locationCityIds().stream()
+                        .map(cityId -> {
+                            City city = cityRepository.findById(cityId)
+                                    .orElseThrow(() -> new ResourceNotFoundException("City not found with ID: " + cityId));
+                            return ProductLocation.builder()
+                                    .product(product)
+                                    .city(city)
+                                    .build();
+                        })
+                        .collect(Collectors.toSet());
+                product.setLocations(newLocations);
+            }
+        }
+
+        Product updatedProduct = productRepository.save(product);
+        log.info("Product {} updated by farmer {}", productId, farmerId);
+
+        return productMapper.toResponse(updatedProduct);
     }
 
+    @Transactional(readOnly = true)
+    public List<String> getDistinctCategories() {
+        return productRepository.findDistinctCategories();
+    }
 }

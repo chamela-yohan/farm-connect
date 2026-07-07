@@ -1,22 +1,18 @@
 package lk.farmconnect.product.service.search;
 
 import lk.farmconnect.product.dto.ProductResponse;
-import lk.farmconnect.product.dto.search.ProductSearchCriteria;
+import lk.farmconnect.product.dto.search.ProductSearchRequest;
 import lk.farmconnect.product.entity.Product;
 import lk.farmconnect.product.mapper.ProductMapper;
 import lk.farmconnect.product.repository.ProductRepository;
-import lk.farmconnect.product.specification.ProductSpecification;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
 
 @Slf4j
 @Service
@@ -26,51 +22,44 @@ public class ProductSearchService {
     private final ProductRepository productRepository;
     private final ProductMapper productMapper;
 
-    private static final List<String> ALLOWED_SORT_FIELDS = List.of("createdAt", "price", "title");
-
     @Transactional(readOnly = true)
-    @Cacheable(value = "productSearch", key = "#criteria")
-    public Page<ProductResponse> searchProducts(ProductSearchCriteria criteria) {
-        log.info("Executing search with criteria: {}", criteria);
+    public Page<ProductResponse> searchProducts(ProductSearchRequest request) {
+        log.info("Executing advanced search: keyword={}, type={}, lat={}", request.keyword(), request.productType(), request.latitude());
 
-        // Build Safe Pagination and sorting
-        Pageable pageable = buildPageable(criteria);
+        // 1. Build Pagination & Sorting
+        Pageable pageable = buildPageable(request);
 
-        // Build Dynamic SQL WHERE Clause (Keyword, Price, etc.)
-        var specification = ProductSpecification.buildSpecification(criteria);
+        // 2. Execute Native Query
+        Page<Product> products = productRepository.searchProducts(
+                request.keyword(),
+                request.productType(),
+                request.category(),
+                request.minPrice(),
+                request.maxPrice(),
+                request.latitude(),
+                request.longitude(),
+                request.radiusKm(),
+                request.city(),
+                request.minStock(),
+                request.minRentalDays(),
+                request.maxRentalDays(),
+                request.deliveryAvailable(),
+                pageable
+        );
 
-        // Execute Query (Repository handles the DB hit + N+1 prevention via EntityGraph)
-        Page<Product> productPage = productRepository.findAll(specification,pageable);
-
-        // Map Entity to DTO
-        return productPage.map(productMapper::toResponse);
-
+        // 3. Map to Response (Handles JSONB, Presigned URLs, etc.)
+        return products.map(productMapper::toResponse);
     }
 
-    // Get distinct categories
-    @Transactional(readOnly = true)
-    @Cacheable(value = "productCategories")
-    public List<String> getDistinctCategories() {
-        log.info("Fetching distinct categories");
-        return productRepository.findDistinctCategories();
-    }
+    private Pageable buildPageable(ProductSearchRequest request) {
+        String sortBy = request.sortBy() != null ? request.sortBy() : "created_at";
+        Sort.Direction direction = "ASC".equalsIgnoreCase(request.sortDir()) ? Sort.Direction.ASC : Sort.Direction.DESC;
 
-
-    // ==========================================
-    // Helpers
-    // ==========================================
-    private Pageable buildPageable(ProductSearchCriteria criteria) {
-
-        Sort sort = Sort.by(Sort.Direction.fromString(criteria.sortDir()), criteria.sortBy());
-
-        if (!ALLOWED_SORT_FIELDS.contains(criteria.sortBy())) {
-            log.warn("Invalid sort field requested: {}. Defaulting to createdAt.", criteria.sortBy());
-            sort = Sort.by(Sort.Direction.DESC, "createdAt");
+        // Whitelist safe columns to prevent SQL injection via sort parameter
+        if (!sortBy.equals("price") && !sortBy.equals("created_at") && !sortBy.equals("title")) {
+            sortBy = "created_at";
         }
 
-        return PageRequest.of(criteria.page(), criteria.size(), sort);
-
+        return PageRequest.of(request.page(), request.size(), Sort.by(direction, sortBy));
     }
-
-
 }

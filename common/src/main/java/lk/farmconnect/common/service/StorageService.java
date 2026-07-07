@@ -30,20 +30,39 @@ public class StorageService {
     @Value("${cloud.aws.s3.bucket}")
     private String bucketName;
 
-    private static final long MAX_FILE_SIZE = 5 * 1024 * 1024;
-    private static final List<String> ALLOWED_MIME_TYPES = List.of(
-            "image/jpeg", "image/png", "image/webp", "video/mp4"
+    // File type categories
+    public enum FileType {
+        IMAGE,
+        VIDEO,
+        DOCUMENT
+    }
+
+    // Validation rules per file type
+    private static final long MAX_IMAGE_SIZE = 5 * 1024 * 1024;        // 5MB
+    private static final long MAX_VIDEO_SIZE = 50 * 1024 * 1024;       // 50MB
+    private static final long MAX_DOCUMENT_SIZE = 10 * 1024 * 1024;    // 10MB
+
+    private static final List<String> ALLOWED_IMAGE_TYPES = List.of(
+            "image/jpeg", "image/png", "image/webp"
+    );
+
+    private static final List<String> ALLOWED_VIDEO_TYPES = List.of(
+            "video/mp4", "video/quicktime"
+    );
+
+    private static final List<String> ALLOWED_DOCUMENT_TYPES = List.of(
+            "application/pdf"
     );
 
     
-    // UPLOAD FILE (Returns the S3 KEY, not the URL)
-    
-    public String uploadFile(MultipartFile file, String folder) {
-        validateFile(file);
+    // UPLOAD FILE (Returns S3 KEY)
+    public String uploadFile(MultipartFile file, String folder, FileType fileType) {
+        validateFile(file, fileType);
         String key = generateUniqueKey(file.getOriginalFilename(), folder);
 
         try {
-            log.info("Uploading file to S3: bucket={}, key={}, size={}", bucketName, key, file.getSize());
+            log.info("Uploading {} to S3: bucket={}, key={}, size={}",
+                    fileType, bucketName, key, file.getSize());
 
             PutObjectRequest putObjectRequest = PutObjectRequest.builder()
                     .bucket(bucketName)
@@ -54,8 +73,6 @@ public class StorageService {
             s3Client.putObject(putObjectRequest, RequestBody.fromInputStream(
                     file.getInputStream(), file.getSize()));
 
-            // Return the KEY, not a presigned URL.
-            // The service layer will generate presigned URLs on the fly when needed.
             return key;
 
         } catch (IOException e) {
@@ -67,9 +84,18 @@ public class StorageService {
         }
     }
 
+    // Overload for backward compatibility (defaults to IMAGE)
+    public String uploadFile(MultipartFile file, String folder) {
+        return uploadFile(file, folder, FileType.IMAGE);
+    }
+
     
-    // GENERATE PRESIGNED URL (Used on the fly)
+    // GENERATE PRESIGNED URL
     public String getPresignedUrl(String objectKey) {
+        return getPresignedUrl(objectKey, Duration.ofHours(1));
+    }
+
+    public String getPresignedUrl(String objectKey, Duration duration) {
         if (objectKey == null || objectKey.isBlank()) {
             return null;
         }
@@ -80,9 +106,8 @@ public class StorageService {
                     .key(objectKey)
                     .build();
 
-            // Strict 1-hour expiration for security
             GetObjectPresignRequest presignRequest = GetObjectPresignRequest.builder()
-                    .signatureDuration(Duration.ofHours(1))
+                    .signatureDuration(duration)
                     .getObjectRequest(getObjectRequest)
                     .build();
 
@@ -93,21 +118,60 @@ public class StorageService {
         }
     }
 
+    
+    // DELETE FILE
     public void deleteFile(String key) {
         try {
             s3Client.deleteObject(DeleteObjectRequest.builder()
-                    .bucket(bucketName).key(key).build());
+                    .bucket(bucketName)
+                    .key(key)
+                    .build());
             log.info("Deleted file from S3: {}", key);
         } catch (Exception e) {
             log.error("Failed to delete file from S3: {}", key, e);
         }
     }
 
-    // --- Private Validation ---
-    private void validateFile(MultipartFile file) {
-        if (file == null || file.isEmpty()) throw new FileUploadException("File cannot be empty");
-        if (file.getSize() > MAX_FILE_SIZE) throw new FileUploadException("File size exceeds 5MB limit");
-        if (!ALLOWED_MIME_TYPES.contains(file.getContentType())) throw new FileUploadException("Invalid file type.");
+    
+    // VALIDATION
+    private void validateFile(MultipartFile file, FileType fileType) {
+        if (file == null || file.isEmpty()) {
+            throw new FileUploadException("File cannot be empty");
+        }
+
+        String contentType = file.getContentType();
+        if (contentType == null) {
+            throw new FileUploadException("File content type is missing");
+        }
+
+        switch (fileType) {
+            case IMAGE:
+                if (!ALLOWED_IMAGE_TYPES.contains(contentType)) {
+                    throw new FileUploadException("Invalid image format. Allowed: JPEG, PNG, WEBP");
+                }
+                if (file.getSize() > MAX_IMAGE_SIZE) {
+                    throw new FileUploadException("Image file size exceeds the 5MB limit");
+                }
+                break;
+
+            case VIDEO:
+                if (!ALLOWED_VIDEO_TYPES.contains(contentType)) {
+                    throw new FileUploadException("Invalid video format. Allowed: MP4, MOV");
+                }
+                if (file.getSize() > MAX_VIDEO_SIZE) {
+                    throw new FileUploadException("Video file size exceeds the 50MB limit");
+                }
+                break;
+
+            case DOCUMENT:
+                if (!ALLOWED_DOCUMENT_TYPES.contains(contentType)) {
+                    throw new FileUploadException("Invalid document format. Allowed: PDF");
+                }
+                if (file.getSize() > MAX_DOCUMENT_SIZE) {
+                    throw new FileUploadException("Document file size exceeds the 10MB limit");
+                }
+                break;
+        }
     }
 
     private String generateUniqueKey(String originalFilename, String folder) {

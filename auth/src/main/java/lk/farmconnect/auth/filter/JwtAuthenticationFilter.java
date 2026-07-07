@@ -1,5 +1,9 @@
 package lk.farmconnect.auth.filter;
 
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.MalformedJwtException;
+import io.jsonwebtoken.UnsupportedJwtException;
+import io.jsonwebtoken.security.SignatureException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -45,18 +49,40 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         final String userEmail;
 
         try {
+            // This will throw specific exceptions if the token is bad or expired
             userEmail = jwtService.extractUsername(jwt);
-        } catch (Exception e) {
-            log.error("Invalid JWT token format");
-            filterChain.doFilter(request, response);
+        }
+        // Catch specific JWT exceptions and return clear 401 messages
+        catch (ExpiredJwtException e) {
+            log.warn("JWT token expired");
+            sendErrorResponse(response, HttpServletResponse.SC_UNAUTHORIZED, "Token expired. Please login again.");
+            return; // STOP the filter chain here! Do not proceed to controller.
+        }
+        catch (MalformedJwtException e) {
+            log.warn("Invalid JWT format: {}", e.getMessage());
+            sendErrorResponse(response, HttpServletResponse.SC_UNAUTHORIZED, "Invalid token format.");
+            return;
+        }
+        catch (SignatureException e) {
+            log.warn("Invalid JWT signature: {}", e.getMessage());
+            sendErrorResponse(response, HttpServletResponse.SC_UNAUTHORIZED, "Invalid token signature.");
+            return;
+        }
+        catch (UnsupportedJwtException | IllegalArgumentException e) {
+            log.warn("JWT validation failed: {}", e.getMessage());
+            sendErrorResponse(response, HttpServletResponse.SC_UNAUTHORIZED, "Invalid or unsupported token.");
+            return;
+        }
+        catch (Exception e) {
+            log.error("Unexpected JWT error: {}", e.getMessage());
+            sendErrorResponse(response, HttpServletResponse.SC_UNAUTHORIZED, "Invalid token.");
             return;
         }
 
+        // If token is valid, set the authentication context
         if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             try {
-
                 UserDetails userDetails = userDetailsService.loadUserByUsername(userEmail);
-
 
                 if (jwtService.isTokenValid(jwt, (User) userDetails)) {
                     UsernamePasswordAuthenticationToken authToken =
@@ -79,5 +105,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    // Helper to send clean JSON error responses
+    private void sendErrorResponse(HttpServletResponse response, int status, String message) throws IOException {
+        response.setStatus(status);
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+        response.getWriter().write("{\"error\": \"" + message + "\"}");
     }
 }

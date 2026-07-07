@@ -2,59 +2,39 @@ package lk.farmconnect.product.dto;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.validation.constraints.*;
-import lk.farmconnect.product.entity.District;
 import lk.farmconnect.product.entity.ProductType;
+
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-public record ProductCreateRequest(
-        @NotBlank(message = "Title is required")
-        @Size(max = 255)
+public record ProductUpdateRequest(
+        @Size(max = 255, message = "Title must be less than 255 characters")
         String title,
-
         String description,
-
-        @NotNull(message = "Product type is required")
         ProductType productType,
-
-        @NotNull(message = "Price is required")
         @DecimalMin(value = "0.01", message = "Price must be greater than 0")
         BigDecimal price,
-
         @NotNull(message = "Category is required")
         UUID categoryId,
-
-        // Common Trading Rules
         @DecimalMin(value = "0", message = "Min order qty cannot be negative")
         BigDecimal minOrderQty,
-
         @DecimalMin(value = "0", message = "Max order qty cannot be negative")
         BigDecimal maxOrderQty,
-
-        @DecimalMin(value = "0.01", message = "Qty step must be positive")
+        @DecimalMin(value = "0", message = "Qty step cannot be negative")
         BigDecimal qtyStep,
-
-        // Delivery
         Boolean isDeliveryAvailable,
-
-        @DecimalMin(value = "0")
+        @DecimalMin(value = "0", message = "Delivery fee cannot be negative")
         BigDecimal deliveryFee,
-
-        // Locations & Delivery Areas
         @NotEmpty(message = "At least one location city is required")
         List<Integer> locationCityIds,
-
         Set<Integer> deliveryDistrictIds,
-
-        // FLEXIBLE ATTRIBUTES (JSONB)
-        // Contains: category, stock, unit, expiryDate, rentalPricePerDay, depositAmount, minRental, maxRental, etc.
-        @NotNull(message = "Attributes are required") JsonNode attributes
-
+        JsonNode attributes
 ) {
-    // Validation based on product type
-    public ProductCreateRequest {
+    public ProductUpdateRequest {
         if (productType == ProductType.PHYSICAL_GOOD) {
             if (attributes == null || attributes.get("availableStock") == null) {
                 throw new IllegalArgumentException("Available stock is required for physical goods");
