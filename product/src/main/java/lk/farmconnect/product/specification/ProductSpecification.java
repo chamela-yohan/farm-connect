@@ -1,4 +1,4 @@
-package lk.farmconnect.product.specification;
+/*package lk.farmconnect.product.specification;
 
 import lk.farmconnect.product.dto.search.ProductSearchCriteria;
 import lk.farmconnect.product.entity.Product;
@@ -69,3 +69,5 @@ public class ProductSpecification {
         };
     }
 }
+
+ */

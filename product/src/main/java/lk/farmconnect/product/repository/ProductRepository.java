@@ -26,153 +26,62 @@ public interface ProductRepository extends JpaRepository<Product, UUID> {
     @Query(value = "SELECT DISTINCT attributes->>'category' as category FROM products WHERE is_deleted = false AND status = 'ACTIVE' AND attributes->>'category' IS NOT NULL ORDER BY category", nativeQuery = true)
     List<String> findDistinctCategories();
 
-    // Search with location - ALL parameters have explicit type casts
     @Query(value = """
-        SELECT p.* FROM products p
-        JOIN users f ON p.farmer_id = f.id
+        SELECT DISTINCT p.* FROM products p
+        LEFT JOIN product_locations pl ON p.id = pl.product_id
+        LEFT JOIN cities c ON pl.city_id = c.id
         WHERE p.is_deleted = false
         AND p.status = 'ACTIVE'
-        AND (CAST(:keyword AS VARCHAR) IS NULL OR LOWER(p.title) LIKE LOWER(CONCAT('%', CAST(:keyword AS VARCHAR), '%')) 
-             OR LOWER(p.description) LIKE LOWER(CONCAT('%', CAST(:keyword AS VARCHAR), '%')))
-        AND (CAST(:category AS VARCHAR) IS NULL OR p.attributes->>'category' = CAST(:category AS VARCHAR))
-        AND (CAST(:productType AS VARCHAR) IS NULL OR p.product_type = CAST(:productType AS VARCHAR))
-        AND (CAST(:minPrice AS DECIMAL) IS NULL OR p.price >= CAST(:minPrice AS DECIMAL))
-        AND (CAST(:maxPrice AS DECIMAL) IS NULL OR p.price <= CAST(:maxPrice AS DECIMAL))
-        AND (CAST(:isDeliveryAvailable AS BOOLEAN) IS NULL OR p.is_delivery_available = CAST(:isDeliveryAvailable AS BOOLEAN))
-        AND (
-            f.location IS NULL 
-            OR ST_DWithin(
-                f.location::geography,
-                ST_SetSRID(ST_MakePoint(CAST(:lon AS DECIMAL), CAST(:lat AS DECIMAL)), 4326)::geography,
-                CAST(:radiusKm AS DECIMAL) * 1000
-            )
-        )
+        
+        -- 1. Basic Filters
+        AND (:keyword IS NULL OR to_tsvector('english', p.title || ' ' || COALESCE(p.description, '')) @@ plainto_tsquery('english', :keyword))
+        AND (:categoryId IS NULL OR p.category_id = :categoryId)
+        AND (:productType IS NULL OR p.product_type = CAST(:productType AS VARCHAR))
+        AND (:minPrice IS NULL OR p.price >= :minPrice)
+        AND (:maxPrice IS NULL OR p.price <= :maxPrice)
+        
+        -- 2. Location Filters
+        AND (:locationDistrictId IS NULL OR c.district_id = :locationDistrictId)
+        AND (:lat IS NULL OR :lon IS NULL OR ST_DWithin(c.coordinates::geography, ST_SetSRID(ST_MakePoint(:lon, :lat), 4326)::geography, :radiusKm * 1000))
+        
+        -- 3. Delivery Filters
+        AND (:isDeliveryAvailable IS NULL OR p.is_delivery_available = :isDeliveryAvailable)
+        AND (:deliveryDistrictId IS NULL OR EXISTS (
+            SELECT 1 FROM product_delivery_areas pda
+            WHERE pda.product_id = p.id AND pda.district_id = :deliveryDistrictId
+        ))
         """,
             countQuery = """
-        SELECT COUNT(*) FROM products p
-        JOIN users f ON p.farmer_id = f.id
+        SELECT COUNT(DISTINCT p.id) FROM products p
+        LEFT JOIN product_locations pl ON p.id = pl.product_id
+        LEFT JOIN cities c ON pl.city_id = c.id
         WHERE p.is_deleted = false
         AND p.status = 'ACTIVE'
-        AND (CAST(:keyword AS VARCHAR) IS NULL OR LOWER(p.title) LIKE LOWER(CONCAT('%', CAST(:keyword AS VARCHAR), '%')) 
-             OR LOWER(p.description) LIKE LOWER(CONCAT('%', CAST(:keyword AS VARCHAR), '%')))
-        AND (CAST(:category AS VARCHAR) IS NULL OR p.attributes->>'category' = CAST(:category AS VARCHAR))
-        AND (CAST(:productType AS VARCHAR) IS NULL OR p.product_type = CAST(:productType AS VARCHAR))
-        AND (CAST(:minPrice AS DECIMAL) IS NULL OR p.price >= CAST(:minPrice AS DECIMAL))
-        AND (CAST(:maxPrice AS DECIMAL) IS NULL OR p.price <= CAST(:maxPrice AS DECIMAL))
-        AND (CAST(:isDeliveryAvailable AS BOOLEAN) IS NULL OR p.is_delivery_available = CAST(:isDeliveryAvailable AS BOOLEAN))
-        AND (
-            f.location IS NULL 
-            OR ST_DWithin(
-                f.location::geography,
-                ST_SetSRID(ST_MakePoint(CAST(:lon AS DECIMAL), CAST(:lat AS DECIMAL)), 4326)::geography,
-                CAST(:radiusKm AS DECIMAL) * 1000
-            )
-        )
+        AND (:keyword IS NULL OR to_tsvector('english', p.title || ' ' || COALESCE(p.description, '')) @@ plainto_tsquery('english', :keyword))
+        AND (:categoryId IS NULL OR p.category_id = :categoryId)
+        AND (:productType IS NULL OR p.product_type = CAST(:productType AS VARCHAR))
+        AND (:minPrice IS NULL OR p.price >= :minPrice)
+        AND (:maxPrice IS NULL OR p.price <= :maxPrice)
+        AND (:locationDistrictId IS NULL OR c.district_id = :locationDistrictId)
+        AND (:lat IS NULL OR :lon IS NULL OR ST_DWithin(c.coordinates::geography, ST_SetSRID(ST_MakePoint(:lon, :lat), 4326)::geography, :radiusKm * 1000))
+        AND (:isDeliveryAvailable IS NULL OR p.is_delivery_available = :isDeliveryAvailable)
+        AND (:deliveryDistrictId IS NULL OR EXISTS (SELECT 1 FROM product_delivery_areas pda WHERE pda.product_id = p.id AND pda.district_id = :deliveryDistrictId))
         """,
             nativeQuery = true)
-    Page<Product> searchWithLocation(
+    Page<Product> searchProductsAdvanced(
             @Param("keyword") String keyword,
-            @Param("category") String category,
-            @Param("productType") ProductType productType,
+            @Param("categoryId") UUID categoryId,
+            @Param("productType") String productType,
+            @Param("minPrice") BigDecimal minPrice,
+            @Param("maxPrice") BigDecimal maxPrice,
+            @Param("locationDistrictId") Integer locationDistrictId,
             @Param("lat") Double lat,
             @Param("lon") Double lon,
             @Param("radiusKm") Double radiusKm,
-            @Param("minPrice") Double minPrice,
-            @Param("maxPrice") Double maxPrice,
             @Param("isDeliveryAvailable") Boolean isDeliveryAvailable,
+            @Param("deliveryDistrictId") Integer deliveryDistrictId,
             Pageable pageable
     );
-
-    // FIXED: Search without location - ALL parameters have explicit type casts
-    @Query(value = """
-        SELECT p.* FROM products p
-        JOIN users f ON p.farmer_id = f.id
-        WHERE p.is_deleted = false
-        AND p.status = 'ACTIVE'
-        AND (CAST(:keyword AS VARCHAR) IS NULL OR LOWER(p.title) LIKE LOWER(CONCAT('%', CAST(:keyword AS VARCHAR), '%')) 
-             OR LOWER(p.description) LIKE LOWER(CONCAT('%', CAST(:keyword AS VARCHAR), '%')))
-        AND (CAST(:category AS VARCHAR) IS NULL OR p.attributes->>'category' = CAST(:category AS VARCHAR))
-        AND (CAST(:productType AS VARCHAR) IS NULL OR p.product_type = CAST(:productType AS VARCHAR))
-        AND (CAST(:minPrice AS DECIMAL) IS NULL OR p.price >= CAST(:minPrice AS DECIMAL))
-        AND (CAST(:maxPrice AS DECIMAL) IS NULL OR p.price <= CAST(:maxPrice AS DECIMAL))
-        AND (CAST(:isDeliveryAvailable AS BOOLEAN) IS NULL OR p.is_delivery_available = CAST(:isDeliveryAvailable AS BOOLEAN))
-        """,
-            countQuery = """
-        SELECT COUNT(*) FROM products p
-        JOIN users f ON p.farmer_id = f.id
-        WHERE p.is_deleted = false
-        AND p.status = 'ACTIVE'
-        AND (CAST(:keyword AS VARCHAR) IS NULL OR LOWER(p.title) LIKE LOWER(CONCAT('%', CAST(:keyword AS VARCHAR), '%')) 
-             OR LOWER(p.description) LIKE LOWER(CONCAT('%', CAST(:keyword AS VARCHAR), '%')))
-        AND (CAST(:category AS VARCHAR) IS NULL OR p.attributes->>'category' = CAST(:category AS VARCHAR))
-        AND (CAST(:productType AS VARCHAR) IS NULL OR p.product_type = CAST(:productType AS VARCHAR))
-        AND (CAST(:minPrice AS DECIMAL) IS NULL OR p.price >= CAST(:minPrice AS DECIMAL))
-        AND (CAST(:maxPrice AS DECIMAL) IS NULL OR p.price <= CAST(:maxPrice AS DECIMAL))
-        AND (CAST(:isDeliveryAvailable AS BOOLEAN) IS NULL OR p.is_delivery_available = CAST(:isDeliveryAvailable AS BOOLEAN))
-        """,
-            nativeQuery = true)
-    Page<Product> searchWithoutLocation(
-            @Param("keyword") String keyword,
-            @Param("category") String category,
-            @Param("productType") ProductType productType,
-            @Param("minPrice") Double minPrice,
-            @Param("maxPrice") Double maxPrice,
-            @Param("isDeliveryAvailable") Boolean isDeliveryAvailable,
-            Pageable pageable
-    );
-
-    // NEW: SEARCH FEATURE
-    @Query(value = """
-        SELECT p.* FROM products p
-        LEFT JOIN product_locations pl ON p.id = pl.product_id AND pl.is_primary = true
-        WHERE p.is_deleted = false
-        AND p.status = 'ACTIVE'
-        AND (:keyword IS NULL OR to_tsvector('english', p.title || ' ' || COALESCE(p.description, '')) @@ plainto_tsquery('english', :keyword))
-        AND (:productType IS NULL OR p.product_type = CAST(:productType AS VARCHAR))
-        AND (:categoryId IS NULL OR p.category_id = :categoryId)
-        AND (:minPrice IS NULL OR p.price >= :minPrice)
-        AND (:maxPrice IS NULL OR p.price <= :maxPrice)
-        AND (:minStock IS NULL OR (p.attributes->>'availableStock')::numeric >= :minStock)
-        AND (:minRentalDays IS NULL OR (p.attributes->>'minRental')::integer >= :minRentalDays)
-        AND (:maxRentalDays IS NULL OR (p.attributes->>'maxRental')::integer <= :maxRentalDays)
-        AND (:deliveryAvailable IS NULL OR p.is_delivery_available = :deliveryAvailable)
-        AND (:city IS NULL OR LOWER(pl.city) = LOWER(:city))
-        AND (:latitude IS NULL OR :longitude IS NULL OR 
-             ST_DWithin(pl.coordinates::geography, ST_SetSRID(ST_MakePoint(:longitude, :latitude), 4326)::geography, :radiusKm * 1000))
-        """,
-            countQuery = """
-        SELECT COUNT(p.id) FROM products p
-        LEFT JOIN product_locations pl ON p.id = pl.product_id AND pl.is_primary = true
-        WHERE p.is_deleted = false
-        AND p.status = 'ACTIVE'
-        AND (:keyword IS NULL OR to_tsvector('english', p.title || ' ' || COALESCE(p.description, '')) @@ plainto_tsquery('english', :keyword))
-        AND (:productType IS NULL OR p.product_type = CAST(:productType AS VARCHAR))
-        AND (:category IS NULL OR p.attributes->>'category' = :category)
-        AND (:minPrice IS NULL OR p.price >= :minPrice)
-        AND (:maxPrice IS NULL OR p.price <= :maxPrice)
-        AND (:minStock IS NULL OR (p.attributes->>'availableStock')::numeric >= :minStock)
-        AND (:minRentalDays IS NULL OR (p.attributes->>'minRental')::integer >= :minRentalDays)
-        AND (:maxRentalDays IS NULL OR (p.attributes->>'maxRental')::integer <= :maxRentalDays)
-        AND (:deliveryAvailable IS NULL OR p.is_delivery_available = :deliveryAvailable)
-        AND (:city IS NULL OR LOWER(pl.city) = LOWER(:city))
-        AND (:latitude IS NULL OR :longitude IS NULL OR 
-             ST_DWithin(pl.coordinates::geography, ST_SetSRID(ST_MakePoint(:longitude, :latitude), 4326)::geography, :radiusKm * 1000))
-        """,
-            nativeQuery = true)
-    Page<Product> searchProducts(
-            @Param("keyword") String keyword,
-            @Param("productType") ProductType productType,
-            @Param("category") String category,
-            @Param("minPrice") BigDecimal minPrice,
-            @Param("maxPrice") BigDecimal maxPrice,
-            @Param("latitude") Double latitude,
-            @Param("longitude") Double longitude,
-            @Param("radiusKm") Double radiusKm,
-            @Param("city") String city,
-            @Param("minStock") BigDecimal minStock,
-            @Param("minRentalDays") Integer minRentalDays,
-            @Param("maxRentalDays") Integer maxRentalDays,
-            @Param("deliveryAvailable") Boolean deliveryAvailable,
-            Pageable pageable
-    );
+    @Query(value = "SELECT DISTINCT title FROM products WHERE title ILIKE CONCAT('%', :query, '%') AND is_deleted = false AND status = 'ACTIVE' LIMIT 5", nativeQuery = true)
+    List<String> findKeywordSuggestions(@Param("query") String query);
 }

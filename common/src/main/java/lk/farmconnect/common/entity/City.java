@@ -1,5 +1,6 @@
 package lk.farmconnect.common.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.persistence.*;
 import lombok.*;
@@ -31,6 +32,7 @@ public class City {
     private Double longitude;
 
     // PostGIS Geography Point (For the 10km radius search)
+    @JsonIgnore
     @Column(columnDefinition = "geography(Point, 4326)")
     private Point coordinates;
 

@@ -45,12 +45,12 @@ public class ProductController {
 
     @GetMapping("/search")
     public ResponseEntity<ApiResponse<Page<ProductResponse>>> searchProducts(
-            @ModelAttribute ProductSearchRequest request) {
-
-        log.info("Search request received from frontend");
-        Page<ProductResponse> results = productSearchService.searchProducts(request);
+            @ModelAttribute ProductSearchCriteria criteria) {
+        System.out.println(criteria);
+        Page<ProductResponse> results = productSearchService.searchProducts(criteria);
         return ResponseEntity.ok(ApiResponse.success(results));
     }
+
 
     // ==========================================
     // STANDARD CRUD (Protected)
