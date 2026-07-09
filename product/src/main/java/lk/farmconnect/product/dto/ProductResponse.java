@@ -37,6 +37,9 @@ public record ProductResponse(
 
         UUID farmerId,
         String farmerName,
+        Double farmerAverageRating,
+        Integer farmerTotalReviews,
+        String farmerProfilePictureUrl,
 
         Integer version, // For optimistic locking
         LocalDateTime createdAt,

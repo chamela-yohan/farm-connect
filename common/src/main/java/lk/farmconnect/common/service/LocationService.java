@@ -46,7 +46,7 @@ public class LocationService {
         return cityRepo.findByDistrictId(districtId).stream()
                 .map(c -> new CityResponse(
                         c.getId(),
-                        c.getDistrictId(), // We only send the ID, NOT the whole District object!
+                        c.getDistrict().getId(), // We only send the ID, NOT the whole District object!
                         c.getNameEn(),
                         c.getNameSi(),
                         c.getNameTa(),

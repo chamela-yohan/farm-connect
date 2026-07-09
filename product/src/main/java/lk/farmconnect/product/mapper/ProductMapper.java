@@ -74,18 +74,33 @@ public class ProductMapper {
         // Map Locations
         List<ProductResponse.LocationDetail> locationDetails = product.getLocations() != null
                 ? product.getLocations().stream()
-                .map(loc -> new ProductResponse.LocationDetail(
-                        loc.getCity().getId(),
-                        loc.getCity().getNameEn(),
-                        loc.getCity().getDistrictId(),
-                        null // District name can be resolved by frontend or fetched via a join
-                ))
+                .map(loc -> {
+                    var city = loc.getCity();
+                    var district = city.getDistrict(); // Fetches the District entity
+
+                    return new ProductResponse.LocationDetail(
+                            city.getId(),
+                            city.getNameEn(),
+                            district != null ? district.getId() : null,
+                            district != null ? district.getNameEn() : null
+                    );
+                })
                 .collect(Collectors.toList())
                 : Collections.emptyList();
 
         // Map Category
         UUID categoryId = product.getCategory() != null ? product.getCategory().getId() : null;
         String categoryName = product.getCategory() != null ? product.getCategory().getName() : null;
+
+        var farmer = product.getFarmer();
+        UUID farmerId = farmer != null ? farmer.getId() : null;
+        String farmerName = farmer != null ? farmer.getName() : null;
+        Double farmerRating = farmer != null ? farmer.getAverageRating() : null;
+        Integer farmerReviews = farmer != null ? farmer.getTotalReviews() : null;
+
+        String farmerProfilePic = (farmer != null && farmer.getProfilePictureUrl() != null)
+                ? storageService.getPresignedUrl(extractKey(farmer.getProfilePictureUrl()))
+                : null;
 
         return new ProductResponse(
                 product.getId(),
@@ -106,8 +121,11 @@ public class ProductMapper {
                 videoUrl,
                 locationDetails,
                 product.getDeliveryDistrictIds(),
-                product.getFarmer().getId(),
-                product.getFarmer().getName(),
+                farmerId,
+                farmerName,
+                farmerRating,
+                farmerReviews,
+                farmerProfilePic,
                 product.getVersion(),
                 product.getCreatedAt(),
                 product.getUpdatedAt()

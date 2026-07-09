@@ -15,8 +15,9 @@ public class City {
     @Id
     private Integer id;
 
-    @Column(name = "district_id")
-    private Integer districtId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "district_id", insertable = false, updatable = false)
+    private District district;
 
     @Column(name = "name_en")
     private String nameEn;
