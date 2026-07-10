@@ -1,6 +1,7 @@
 package lk.farmconnect.order.service;
 
 import lk.farmconnect.common.exception.BusinessException;
+import lk.farmconnect.common.service.StorageService;
 import lk.farmconnect.order.dto.AddToCartRequest;
 import lk.farmconnect.order.dto.CartItemResponse;
 import lk.farmconnect.order.dto.CartResponse;
@@ -21,9 +22,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 @Slf4j
@@ -34,6 +38,7 @@ public class CartService {
     private final CartRepository cartRepository;
     private final ProductRepository productRepository;
     private final CartMapper cartMapper;
+    private final StorageService fileStorageService;
 
     @Transactional(readOnly = true)
     public CartResponse getCart(User buyer) {
@@ -76,6 +81,30 @@ public class CartService {
         cartRepository.save(cart);
         log.info("Added {} of {} to cart for user {}", request.quantity(), product.getTitle(), buyer.getEmail());
 
+        return buildCartResponse(cart);
+    }
+
+    @Transactional
+    public CartResponse updateItemQuantity(User buyer, UUID itemId, BigDecimal newQuantity) {
+        Cart cart = cartRepository.findByBuyer(buyer)
+                .orElseThrow(() -> new CartException("Cart not found"));
+
+        CartItem item = cart.getItems().stream()
+                .filter(i -> i.getId().equals(itemId))
+                .findFirst()
+                .orElseThrow(() -> new CartException("Item not found in cart"));
+
+
+        if (newQuantity.compareTo(BigDecimal.ZERO) <= 0) {
+            cart.getItems().remove(item);
+        } else {
+            // Validate the new quantity against product rules (stock, min/max, step)
+            validateProductAvailability(item.getProduct(), newQuantity);
+            item.setQuantity(newQuantity);
+        }
+
+        cartRepository.save(cart);
+        log.info("Updated quantity of {} to {} for user {}", item.getProduct().getTitle(), newQuantity, buyer.getEmail());
         return buildCartResponse(cart);
     }
 
@@ -133,6 +162,20 @@ public class CartService {
             throw new ProductUnavailableException("Product is no longer available.");
         }
 
+        if (product.getQtyStep() != null && product.getQtyStep().compareTo(BigDecimal.ZERO) > 0) {
+            BigDecimal remainder = requestedQty.remainder(product.getQtyStep());
+            if (remainder.compareTo(BigDecimal.ZERO) != 0) {
+
+                String unit = "";
+                if (product.getAttributes() != null && product.getAttributes().has("unit")) {
+                    unit = " " + product.getAttributes().get("unit").asText();
+                }
+
+
+                throw new InvalidQuantityException("Quantity must be in multiples of " + product.getQtyStep() + unit);
+            }
+        }
+
         // ONLY check stock and expiry for PHYSICAL GOODS
         if (product.getProductType() == ProductType.PHYSICAL_GOOD) {
             LocalDate expiryDate = getAttributeAsDate(product, "expiryDate");
@@ -163,15 +206,46 @@ public class CartService {
 
     private CartResponse buildCartResponse(Cart cart) {
         List<CartItemResponse> itemResponses = cart.getItems().stream()
-                .map(cartMapper::toCartItemResponse)
+                .map(this::buildCartItemResponse) // Use custom builder
                 .toList();
 
         BigDecimal totalAmount = itemResponses.stream()
                 .map(CartItemResponse::subtotal)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        int totalItems = itemResponses.size();
+        return new CartResponse(itemResponses, totalAmount, itemResponses.size());
+    }
 
-        return cartMapper.toCartResponse(itemResponses, totalAmount, totalItems);
+    // Custom builder to handle Presigned URLs and JSONB safely
+    private CartItemResponse buildCartItemResponse(CartItem item) {
+        Product p = item.getProduct();
+
+        // 1. Map Images to Presigned URLs
+        List<String> urls = p.getImages() != null
+                ? p.getImages().stream()
+                .sorted((i1, i2) -> Integer.compare(i1.getDisplayOrder(), i2.getDisplayOrder()))
+                .map(img -> fileStorageService.getPresignedUrl(img.getImageUrl())) // Adjust if you use extractKey()
+                .filter(Objects::nonNull)
+                .toList()
+                : Collections.emptyList();
+
+        // 2. Extract JSONB attributes safely
+        BigDecimal stock = getAttributeAsDecimal(p, "availableStock");
+
+        // 3. Build Response with all trading rules
+        return new CartItemResponse(
+                item.getId(),
+                p.getId(),
+                p.getTitle(),
+                p.getProductType().name(),
+                p.getPrice(),
+                item.getQuantity(),
+                p.getPrice().multiply(item.getQuantity()),
+                urls,
+                p.getQtyStep(),
+                p.getMinOrderQty(),
+                p.getMaxOrderQty(),
+                stock
+        );
     }
 }
