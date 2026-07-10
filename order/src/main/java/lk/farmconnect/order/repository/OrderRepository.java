@@ -44,4 +44,14 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
     @EntityGraph(attributePaths = {"items", "items.product", "farmer"})
     @Query("SELECT o FROM Order o WHERE o.buyer.id = :buyerId ORDER BY o.createdAt DESC")
     Page<Order> findRecentOrdersByBuyer(@Param("buyerId") UUID buyerId, Pageable pageable);
+
+
+    // Buyer Order History
+    Page<Order> findByBuyerIdOrderByCreatedAtDesc(UUID buyerId, Pageable pageable);
+    Page<Order> findByBuyerIdAndStatusOrderByCreatedAtDesc(UUID buyerId, OrderStatus status, Pageable pageable);
+
+    // Farmer Received Orders
+    Page<Order> findByFarmerIdOrderByCreatedAtDesc(UUID farmerId, Pageable pageable);
+    Page<Order> findByFarmerIdAndStatusOrderByCreatedAtDesc(UUID farmerId, OrderStatus status, Pageable pageable);
+
 }
