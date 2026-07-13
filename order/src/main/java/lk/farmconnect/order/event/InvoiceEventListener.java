@@ -18,7 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class InvoiceEventListener {
 
     private final InvoiceService invoiceService;
-    private final StorageService storageService; // Changed from FileStorageService
+    private final StorageService storageService;
     private final OrderRepository orderRepository;
 
     @Async
@@ -30,27 +30,27 @@ public class InvoiceEventListener {
         try {
             log.info("Generating invoice for order {} asynchronously...", order.getOrderNumber());
 
-            // Generate PDF bytes
+            // 1. Generate PDF bytes
             byte[] pdfBytes = invoiceService.generateInvoice(order);
 
-            // Wrap bytes in our production-safe MultipartFile
+            // 2. Wrap bytes in MultipartFile
             ByteArrayMultipartFile pdfFile = new ByteArrayMultipartFile(
                     pdfBytes,
                     "Invoice_" + order.getOrderNumber() + ".pdf",
                     "application/pdf"
             );
 
-            // Upload using StorageService with DOCUMENT type
+            // 3. Upload to MinIO. This returns the KEY (e.g., "invoices/uuid.pdf")
             String invoiceKey = storageService.uploadFile(pdfFile, "invoices", StorageService.FileType.DOCUMENT);
 
-            // Generate presigned URL for the invoice
-            String invoiceUrl = storageService.getPresignedUrl(invoiceKey);
+            log.info("Invoice uploaded successfully. Key to be saved: {}", invoiceKey);
 
-            // Save URL to Database
-            order.setInvoiceUrl(invoiceUrl);
+            // 4. CRITICAL: Save ONLY the key to the database.
+            // DO NOT call storageService.getPresignedUrl() here!
+            order.setInvoiceKey(invoiceKey);
             orderRepository.save(order);
 
-            log.info("Invoice successfully uploaded to S3 for order {}", order.getOrderNumber());
+            log.info("Invoice key successfully saved to database for order {}", order.getOrderNumber());
 
         } catch (Exception e) {
             log.error("Failed to generate/upload invoice for order {}", order.getOrderNumber(), e);

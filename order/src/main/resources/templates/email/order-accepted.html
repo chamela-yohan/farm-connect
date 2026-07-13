@@ -23,8 +23,13 @@
 
         <p style="font-size: 14px; color: #555555;">You can view and download your official invoice by clicking the button below:</p>
 
+        <!-- NEW: Link to the frontend intermediary page -->
         <div style="text-align: center; margin: 30px 0;">
-            <a th:href="${invoiceUrl}" style="background-color: #27ae60; color: #ffffff; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold; font-size: 16px;">Download Invoice</a>
+            <!-- Replace 'http://localhost:3000' with your actual production frontend URL later -->
+            <a th:href="'http://localhost:3000/en'+ '/orders/' + ${orderId} + '/download'"
+               style="background-color: #27ae60; color: #ffffff; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold; font-size: 16px; display: inline-block;">
+                Download Invoice
+            </a>
         </div>
 
         <p style="font-size: 14px; color: #777777; margin-top: 30px;">Please contact the farmer directly using the phone number above to coordinate your delivery or pickup.</p>

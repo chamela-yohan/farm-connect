@@ -31,7 +31,10 @@ public class SmtpEmailService implements EmailService {
             context.setVariable("totalAmount", order.getTotalAmount().toPlainString());
             context.setVariable("farmerName", order.getFarmer().getName());
             context.setVariable("farmerMobile", order.getFarmer().getMobileNumber());
-            context.setVariable("invoiceUrl", order.getInvoiceUrl());
+            context.setVariable("orderId", order.getId().toString());
+
+            // FIX: Explicitly pass the locale so the URL builds correctly
+            context.setVariable("locale", "en");
 
             String htmlContent = templateEngine.process("email/order-accepted", context);
             sendHtmlEmail(order.getBuyer().getEmail(), "Order Accepted: " + order.getOrderNumber(), htmlContent);
@@ -40,15 +43,16 @@ public class SmtpEmailService implements EmailService {
             log.error("Failed to send acceptance email for order {}", order.getOrderNumber(), e);
         }
     }
-
     @Override
     public void sendOrderRejectedEmail(Order order) {
         try {
             Context context = new Context();
             context.setVariable("buyerName", order.getBuyer().getName());
             context.setVariable("orderNumber", order.getOrderNumber());
-            // Use the farmerNotes as the rejection reason
             context.setVariable("rejectionReason", order.getFarmerNotes() != null ? order.getFarmerNotes() : "No specific reason provided.");
+
+            //  FIX: Explicitly pass the locale here too
+            context.setVariable("locale", "en");
 
             String htmlContent = templateEngine.process("email/order-rejected", context);
             sendHtmlEmail(order.getBuyer().getEmail(), "Order Declined: " + order.getOrderNumber(), htmlContent);
