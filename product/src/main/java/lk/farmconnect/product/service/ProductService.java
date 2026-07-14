@@ -71,6 +71,16 @@ public class ProductService {
             throw new IllegalArgumentException("At least one product image is required");
         }
 
+        if (request.productType() == ProductType.RENTABLE || request.productType() == ProductType.SERVICE) {
+            if (request.attributes() == null || !request.attributes().has("availableUnits")) {
+                throw new IllegalArgumentException("Available units/capacity must be specified for rental or service products.");
+            }
+            int availableUnits = request.attributes().get("availableUnits").asInt();
+            if (availableUnits <= 0) {
+                throw new IllegalArgumentException("Available units must be at least 1.");
+            }
+        }
+
         // 2. Upload Media
         List<String> imageKeys = images.stream()
                 .map(img -> storageService.uploadFile(img, "products/images", StorageService.FileType.IMAGE))

@@ -40,6 +40,11 @@
         </dependency>
         <dependency>
             <groupId>lk.farmconnect</groupId>
+            <artifactId>booking</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>lk.farmconnect</groupId>
             <artifactId>chat</artifactId>
             <version>${project.version}</version>
         </dependency>

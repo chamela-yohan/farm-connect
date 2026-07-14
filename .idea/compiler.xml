@@ -12,6 +12,7 @@
           <entry name="$MAVEN_REPOSITORY$/org/mapstruct/mapstruct/1.5.5.Final/mapstruct-1.5.5.Final.jar" />
         </processorPath>
         <module name="app" />
+        <module name="booking" />
         <module name="product" />
         <module name="common" />
         <module name="auth" />
@@ -26,6 +27,7 @@
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">
       <module name="app" options="-parameters" />
       <module name="auth" options="-parameters" />
+      <module name="booking" options="-parameters" />
       <module name="chat" options="-parameters" />
       <module name="common" options="-parameters" />
       <module name="order" options="-parameters" />
