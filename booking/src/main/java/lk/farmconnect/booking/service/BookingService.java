@@ -1,7 +1,10 @@
 package lk.farmconnect.booking.service;
 
+import lk.farmconnect.booking.dto.BookingResponse;
+import lk.farmconnect.booking.dto.BookingStatusUpdateRequest;
 import lk.farmconnect.booking.entity.Booking;
 import lk.farmconnect.booking.entity.BookingStatus;
+import lk.farmconnect.booking.mapper.BookingMapper;
 import lk.farmconnect.booking.repository.BookingRepository;
 import lk.farmconnect.common.exception.BusinessException;
 import lk.farmconnect.product.entity.Product;
@@ -10,6 +13,8 @@ import lk.farmconnect.product.repository.ProductRepository;
 import lk.farmconnect.user.User;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,9 +30,10 @@ public class BookingService {
 
     private final BookingRepository bookingRepository;
     private final ProductRepository productRepository;
+    private final BookingMapper bookingMapper;
 
     @Transactional
-    public Booking createBookingRequest(User buyer, UUID productId, LocalDate startDate, LocalDate endDate, Integer quantity, String notes) {
+    public BookingResponse createBookingRequest(User buyer, UUID productId, LocalDate startDate, LocalDate endDate, Integer quantity, String notes) {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new BusinessException("Product not found"));
 
@@ -98,6 +104,56 @@ public class BookingService {
                 .buyerNotes(notes)
                 .build();
 
-        return bookingRepository.save(booking);
+        Booking savedbooking =  bookingRepository.save(booking);
+        return  bookingMapper.toResponse(savedbooking);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<BookingResponse> getFarmerBookings(User farmer, String status, Pageable pageable) {
+        Page<Booking> bookings;
+
+        if (status != null && !status.isBlank()) {
+            try {
+                BookingStatus bookingStatus = BookingStatus.valueOf(status.toUpperCase());
+                bookings = bookingRepository.findByFarmerIdAndStatus(farmer.getId(), bookingStatus, pageable);
+            } catch (IllegalArgumentException e) {
+                throw new BusinessException("Invalid booking status provided.");
+            }
+        } else {
+            bookings = bookingRepository.findByFarmerId(farmer.getId(), pageable);
+        }
+
+        return bookings.map(bookingMapper::toResponse);
+    }
+
+    @Transactional
+    public BookingResponse updateBookingStatus(UUID bookingId, BookingStatusUpdateRequest request, User currentUser) {
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new BusinessException("Booking not found"));
+
+        if (!booking.getFarmer().getId().equals(currentUser.getId())) {
+            throw new BusinessException("Access Denied: You do not own this booking.");
+        }
+
+        BookingStatus oldStatus = booking.getStatus();
+
+        if (oldStatus == BookingStatus.COMPLETED || oldStatus == BookingStatus.REJECTED || oldStatus == BookingStatus.CANCELLED) {
+            throw new BusinessException("Cannot update a booking that is already in a terminal state.");
+        }
+
+        if (request.newStatus() == BookingStatus.ACCEPTED && oldStatus != BookingStatus.PENDING) {
+            throw new BusinessException("Can only accept a PENDING booking.");
+        }
+
+        booking.setStatus(request.newStatus());
+
+        if (request.notes() != null && !request.notes().isBlank()) {
+            booking.setFarmerNotes(request.notes());
+        }
+
+        log.info("Farmer {} updated booking {} from {} to {}", currentUser.getId(), bookingId, oldStatus, request.newStatus());
+
+        Booking savedBooking = bookingRepository.save(booking);
+        return bookingMapper.toResponse(savedBooking);
     }
 }

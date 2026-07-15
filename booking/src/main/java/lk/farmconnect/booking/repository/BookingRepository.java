@@ -1,6 +1,9 @@
 package lk.farmconnect.booking.repository;
 
 import lk.farmconnect.booking.entity.Booking;
+import lk.farmconnect.booking.entity.BookingStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -11,6 +14,9 @@ import java.util.UUID;
 
 @Repository
 public interface BookingRepository extends JpaRepository<Booking, UUID> {
+
+    Page<Booking> findByFarmerId(UUID farmerId, Pageable pageable);
+    Page<Booking> findByFarmerIdAndStatus(UUID farmerId, BookingStatus status, Pageable pageable);
 
     //  CAPACITY CHECK
     // Sums the quantity of all active/pending bookings that overlap with the requested dates.
