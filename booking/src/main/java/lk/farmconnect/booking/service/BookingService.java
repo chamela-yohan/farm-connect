@@ -156,4 +156,22 @@ public class BookingService {
         Booking savedBooking = bookingRepository.save(booking);
         return bookingMapper.toResponse(savedBooking);
     }
+
+    @Transactional(readOnly = true)
+    public Page<BookingResponse> getBuyerBookings(User buyer, String status, Pageable pageable) {
+        Page<Booking> bookings;
+
+        if (status != null && !status.isBlank()) {
+            try {
+                BookingStatus bookingStatus = BookingStatus.valueOf(status.toUpperCase());
+                bookings = bookingRepository.findByBuyerIdAndStatus(buyer.getId(), bookingStatus, pageable);
+            } catch (IllegalArgumentException e) {
+                throw new BusinessException("Invalid booking status provided.");
+            }
+        } else {
+            bookings = bookingRepository.findByBuyerId(buyer.getId(), pageable);
+        }
+
+        return bookings.map(bookingMapper::toResponse);
+    }
 }

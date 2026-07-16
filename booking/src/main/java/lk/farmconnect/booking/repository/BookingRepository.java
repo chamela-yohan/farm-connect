@@ -18,6 +18,10 @@ public interface BookingRepository extends JpaRepository<Booking, UUID> {
     Page<Booking> findByFarmerId(UUID farmerId, Pageable pageable);
     Page<Booking> findByFarmerIdAndStatus(UUID farmerId, BookingStatus status, Pageable pageable);
 
+    // Add these methods alongside your existing farmer queries
+    Page<Booking> findByBuyerId(UUID buyerId, Pageable pageable);
+    Page<Booking> findByBuyerIdAndStatus(UUID buyerId, BookingStatus status, Pageable pageable);
+
     //  CAPACITY CHECK
     // Sums the quantity of all active/pending bookings that overlap with the requested dates.
     @Query("SELECT COALESCE(SUM(b.quantity), 0) FROM Booking b WHERE b.product.id = :productId " +

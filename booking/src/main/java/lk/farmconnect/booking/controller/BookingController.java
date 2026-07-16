@@ -61,4 +61,15 @@ public class BookingController {
         BookingResponse updatedBooking = bookingService.updateBookingStatus(id, request, farmer);
         return ResponseEntity.ok(ApiResponse.success(updatedBooking, "Booking status updated successfully"));
     }
+
+
+    @GetMapping("/buyer")
+    public ResponseEntity<ApiResponse<Page<BookingResponse>>> getBuyerBookings(
+            @AuthenticationPrincipal User buyer,
+            @RequestParam(required = false) String status,
+            @PageableDefault(size = 10) Pageable pageable) {
+
+        Page<BookingResponse> bookings = bookingService.getBuyerBookings(buyer, status, pageable);
+        return ResponseEntity.ok(ApiResponse.success(bookings));
+    }
 }
