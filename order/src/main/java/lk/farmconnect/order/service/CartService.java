@@ -162,21 +162,56 @@ public class CartService {
             throw new ProductUnavailableException("Product is no longer available.");
         }
 
-        if (product.getQtyStep() != null && product.getQtyStep().compareTo(BigDecimal.ZERO) > 0) {
-            BigDecimal remainder = requestedQty.remainder(product.getQtyStep());
-            if (remainder.compareTo(BigDecimal.ZERO) != 0) {
+        // ==========================================
+        // 1. MIN / MAX VALIDATION
+        // ==========================================
+        BigDecimal minQty = product.getMinOrderQty() != null ? product.getMinOrderQty() : BigDecimal.ONE;
 
+        if (requestedQty.compareTo(minQty) < 0) {
+            throw new InvalidQuantityException("Minimum order quantity is " + minQty);
+        }
+
+        if (product.getMaxOrderQty() != null && requestedQty.compareTo(product.getMaxOrderQty()) > 0) {
+            throw new InvalidQuantityException("Maximum order quantity is " + product.getMaxOrderQty());
+        }
+
+        // ==========================================
+        // 2. STEP VALIDATION (The Math Fix)
+        // ==========================================
+        if (product.getQtyStep() != null && product.getQtyStep().compareTo(BigDecimal.ZERO) > 0) {
+            BigDecimal step = product.getQtyStep();
+
+            // Calculate the difference from the minimum quantity
+            BigDecimal diff = requestedQty.subtract(minQty);
+
+            // Check if the difference is a multiple of the step
+            // We divide and check if the result is effectively an integer
+            BigDecimal division = diff.divide(step, 4, java.math.RoundingMode.HALF_UP);
+            BigDecimal roundedDivision = division.setScale(0, java.math.RoundingMode.HALF_UP);
+
+            // Allow a tiny margin of error for floating point math (e.g., 1.5000000000000002)
+            boolean isMultiple = division.subtract(roundedDivision).abs().compareTo(new BigDecimal("0.0001")) <= 0;
+
+            if (!isMultiple) {
                 String unit = "";
                 if (product.getAttributes() != null && product.getAttributes().has("unit")) {
                     unit = " " + product.getAttributes().get("unit").asText();
                 }
 
+                // Generate helpful examples for the error message
+                BigDecimal nextValid = minQty.add(step);
+                BigDecimal nextNextValid = minQty.add(step.multiply(new BigDecimal("2")));
 
-                throw new InvalidQuantityException("Quantity must be in multiples of " + product.getQtyStep() + unit);
+                throw new InvalidQuantityException(
+                        String.format("Quantity must be at least %s, in increments of %s%s (e.g., %s, %s, %s...)",
+                                minQty, step, unit, minQty, nextValid, nextNextValid)
+                );
             }
         }
 
-        // ONLY check stock and expiry for PHYSICAL GOODS
+        // ==========================================
+        // 3. STOCK & EXPIRY (PHYSICAL GOODS ONLY)
+        // ==========================================
         if (product.getProductType() == ProductType.PHYSICAL_GOOD) {
             LocalDate expiryDate = getAttributeAsDate(product, "expiryDate");
             if (expiryDate != null && expiryDate.isBefore(LocalDate.now())) {
@@ -186,20 +221,6 @@ public class CartService {
             BigDecimal availableStock = getAttributeAsDecimal(product, "availableStock");
             if (availableStock != null && availableStock.compareTo(requestedQty) < 0) {
                 throw new ProductUnavailableException("Insufficient stock available.");
-            }
-        }
-
-        // Min/Max/Step Rules (Apply to all types)
-        if (product.getMinOrderQty() != null && requestedQty.compareTo(product.getMinOrderQty()) < 0) {
-            throw new InvalidQuantityException("Minimum order quantity is " + product.getMinOrderQty());
-        }
-        if (product.getMaxOrderQty() != null && requestedQty.compareTo(product.getMaxOrderQty()) > 0) {
-            throw new InvalidQuantityException("Maximum order quantity is " + product.getMaxOrderQty());
-        }
-        if (product.getQtyStep() != null && product.getQtyStep().compareTo(BigDecimal.ZERO) > 0) {
-            BigDecimal remainder = requestedQty.remainder(product.getQtyStep());
-            if (remainder.compareTo(BigDecimal.ZERO) != 0) {
-                throw new InvalidQuantityException("Quantity must be in multiples of " + product.getQtyStep());
             }
         }
     }
