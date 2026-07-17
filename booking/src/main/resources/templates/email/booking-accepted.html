@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px; }
+        .header { background-color: #2980b9; color: white; padding: 15px; text-align: center; border-radius: 8px 8px 0 0; }
+        .details { background-color: #f9f9f9; padding: 15px; border-radius: 4px; margin: 15px 0; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header"><h2>✅ Booking Confirmed!</h2></div>
+    <p>Hello <strong th:text="${buyerName}">Buyer</strong>,</p>
+    <p>Great news! Your booking request for <strong th:text="${productTitle}">Product</strong> has been <strong>Accepted</strong> by the farmer.</p>
+
+    <div class="details">
+        <p><strong>Farmer:</strong> <span th:text="${farmerName}">Farmer</span></p>
+        <p><strong>Dates:</strong> <span th:text="${startDate}">Start</span> to <span th:text="${endDate}">End</span></p>
+        <p><strong>Total Amount:</strong> LKR <span th:text="${totalAmount}">0.00</span></p>
+        <p th:if="${farmerNotes}"><strong>Farmer Note:</strong> <em th:text="${farmerNotes}">Note</em></p>
+        <p th:if="${farmerMobile}"><strong>Contact:</strong> <span th:text="${farmerMobile}">Phone</span></p>
+    </div>
+
+    <p>You can view all your active bookings in your dashboard.</p>
+</div>
+</body>
+</html>

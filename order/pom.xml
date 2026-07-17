@@ -12,11 +12,7 @@
     <artifactId>order</artifactId>
 
     <dependencies>
-        <dependency>
-            <groupId>lk.farmconnect</groupId>
-            <artifactId>common</artifactId>
-            <version>${project.version}</version>
-        </dependency>
+
         <dependency>
             <groupId>lk.farmconnect</groupId>
             <artifactId>user</artifactId>
@@ -57,15 +53,6 @@
             <artifactId>openpdf</artifactId>
             <version>1.3.30</version>
         </dependency>
-        <!-- Spring Boot Mail for sending transactional emails -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-mail</artifactId>
-        </dependency>
-        <!-- Thymeleaf for professional HTML email templates -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-thymeleaf</artifactId>
-        </dependency>
+
     </dependencies>
 </project>

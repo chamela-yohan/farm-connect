@@ -4,6 +4,8 @@ import lk.farmconnect.booking.dto.BookingResponse;
 import lk.farmconnect.booking.dto.BookingStatusUpdateRequest;
 import lk.farmconnect.booking.entity.Booking;
 import lk.farmconnect.booking.entity.BookingStatus;
+import lk.farmconnect.booking.event.BookingNotificationPayload;
+import lk.farmconnect.booking.event.BookingStatusUpdatedEvent;
 import lk.farmconnect.booking.mapper.BookingMapper;
 import lk.farmconnect.booking.repository.BookingRepository;
 import lk.farmconnect.common.exception.BusinessException;
@@ -31,6 +33,7 @@ public class BookingService {
     private final BookingRepository bookingRepository;
     private final ProductRepository productRepository;
     private final BookingMapper bookingMapper;
+    private final org.springframework.context.ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public BookingResponse createBookingRequest(User buyer, UUID productId, LocalDate startDate, LocalDate endDate, Integer quantity, String notes) {
@@ -154,6 +157,28 @@ public class BookingService {
         log.info("Farmer {} updated booking {} from {} to {}", currentUser.getId(), bookingId, oldStatus, request.newStatus());
 
         Booking savedBooking = bookingRepository.save(booking);
+
+        BookingNotificationPayload payload = new BookingNotificationPayload(
+                savedBooking.getId(),
+                savedBooking.getStatus(),
+                savedBooking.getBuyer().getEmail(),
+                savedBooking.getBuyer().getName(),
+                savedBooking.getFarmer().getEmail(),
+                savedBooking.getFarmer().getName(),
+                savedBooking.getFarmer().getMobileNumber(),
+                savedBooking.getProduct().getTitle(),
+                savedBooking.getStartDate(),
+                savedBooking.getEndDate(),
+                savedBooking.getTotalDays(),
+                savedBooking.getQuantity(),
+                savedBooking.getTotalAmount(),
+                savedBooking.getBuyerNotes(),
+                savedBooking.getFarmerNotes()
+        );
+
+
+        eventPublisher.publishEvent(new BookingStatusUpdatedEvent(this, payload));
+
         return bookingMapper.toResponse(savedBooking);
     }
 
