@@ -1,6 +1,7 @@
 package lk.farmconnect.chat.entity;
 
 import jakarta.persistence.*;
+import lk.farmconnect.booking.entity.Booking;
 import lk.farmconnect.order.entity.Order;
 import lk.farmconnect.user.User;
 import lombok.*;
@@ -12,6 +13,7 @@ import java.util.UUID;
 @Entity
 @Table(name = "conversations", indexes = {
         @Index(name = "idx_conv_order", columnList = "order_id", unique = true),
+        @Index(name = "idx_conv_booking", columnList = "booking_id", unique = true),
         @Index(name = "idx_conv_users", columnList = "buyer_id, farmer_id")
 })
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
@@ -21,9 +23,15 @@ public class Conversation {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
+
     @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "order_id", nullable = false, unique = true)
+    @JoinColumn(name = "order_id", unique = true)
     private Order order;
+
+
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "booking_id", unique = true)
+    private Booking booking;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "buyer_id", nullable = false)

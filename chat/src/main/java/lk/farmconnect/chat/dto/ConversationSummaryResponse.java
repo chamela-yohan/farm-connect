@@ -6,6 +6,7 @@ import java.util.UUID;
 public record ConversationSummaryResponse(
         UUID conversationId,
         String orderNumber,
+        String bookingId,
         UUID otherUserId,
         String otherUserName,
         String otherUserProfilePicture,

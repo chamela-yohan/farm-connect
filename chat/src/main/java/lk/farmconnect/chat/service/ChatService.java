@@ -9,6 +9,7 @@ import lk.farmconnect.chat.repository.ConversationRepository;
 import lk.farmconnect.chat.repository.MessageRepository;
 import lk.farmconnect.common.exception.BusinessException;
 import lk.farmconnect.common.exception.ResourceNotFoundException;
+import lk.farmconnect.common.service.StorageService;
 import lk.farmconnect.user.User;
 import lk.farmconnect.user.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -30,8 +31,9 @@ public class ChatService {
     private final MessageRepository messageRepository;
     private final UserRepository userRepository;
     private final MessageMapper messageMapper;
+    private final StorageService storageService;
 
-    
+
     // REAL-TIME MESSAGE SENDING
     @Transactional
     public MessageResponse sendMessage(UUID conversationId, UUID senderId, String content) {
@@ -109,12 +111,24 @@ public class ChatService {
                     // Fetch unread count
                     long unread = messageRepository.countByConversationIdAndIsReadFalseAndSenderIdNot(conv.getId(), userId);
 
+
+                    String profilePicUrl = null;
+                    if (otherUser.getProfilePictureUrl() != null && !otherUser.getProfilePictureUrl().isBlank()) {
+                        //String key = storageService.extractKey(otherUser.getProfilePictureUrl());
+                        profilePicUrl = storageService.getPresignedUrl(otherUser.getProfilePictureUrl());
+                    }
+
+
+                    String orderNumber = conv.getOrder() != null ? conv.getOrder().getOrderNumber() : null;
+                    String bookingId = conv.getBooking() != null ? conv.getBooking().getId().toString() : null;
+
                     return new ConversationSummaryResponse(
                             conv.getId(),
-                            conv.getOrder().getOrderNumber(),
+                            orderNumber,
+                            bookingId,
                             otherUser.getId(),
                             otherUser.getName(),
-                            otherUser.getProfilePictureUrl(),
+                            profilePicUrl,
                             lastMsg != null ? lastMsg.getContent() : "No messages yet",
                             lastMsg != null ? lastMsg.getCreatedAt() : conv.getCreatedAt(),
                             unread
