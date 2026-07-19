@@ -17,13 +17,23 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/v1/conversations")
+@RequestMapping("/api/v1/chat") // Base path for all chat endpoints
 @RequiredArgsConstructor
 public class ChatController {
 
     private final ChatService chatService;
 
+    // FETCH INBOX (List of all conversations)
+    // Maps to: GET /api/v1/chat
+    @GetMapping
+    public ResponseEntity<ApiResponse<List<ConversationSummaryResponse>>> getMyConversations(
+            @AuthenticationPrincipal User currentUser) {
+        List<ConversationSummaryResponse> inbox = chatService.getMyConversations(currentUser.getId());
+        return ResponseEntity.ok(ApiResponse.success(inbox));
+    }
+
     // FETCH CHAT HISTORY (Paginated)
+    // Maps to: GET /api/v1/chat/{conversationId}/messages
     @GetMapping("/{conversationId}/messages")
     public ResponseEntity<ApiResponse<Page<MessageResponse>>> getHistory(
             @PathVariable UUID conversationId,
@@ -33,25 +43,29 @@ public class ChatController {
 
         Pageable pageable = PageRequest.of(page, size);
         Page<MessageResponse> history = chatService.getChatHistory(conversationId, currentUser.getId(), pageable);
-
         return ResponseEntity.ok(ApiResponse.success(history));
     }
 
     // MARK MESSAGES AS READ
+    // Maps to: PUT /api/v1/chat/{conversationId}/read
     @PutMapping("/{conversationId}/read")
     public ResponseEntity<ApiResponse<Void>> markAsRead(
             @PathVariable UUID conversationId,
             @AuthenticationPrincipal User currentUser) {
 
         chatService.markMessagesAsRead(conversationId, currentUser.getId());
-        return ResponseEntity.ok(ApiResponse.success("Messages marked as read"));
+        // FIXED: Return null for data to match ApiResponse<Void>
+        return ResponseEntity.ok(ApiResponse.success(null));
     }
-    // FETCH INBOX (List of all conversations)
-    @GetMapping
-    public ResponseEntity<ApiResponse<List<ConversationSummaryResponse>>> getMyConversations(
+
+    // GET CONVERSATION ID BY ORDER ID
+    // Maps to: GET /api/v1/chat/order/{orderId}/conversation
+    @GetMapping("/order/{orderId}/conversation")
+    public ResponseEntity<ApiResponse<UUID>> getConversationByOrder(
+            @PathVariable UUID orderId,
             @AuthenticationPrincipal User currentUser) {
 
-        List<ConversationSummaryResponse> inbox = chatService.getMyConversations(currentUser.getId());
-        return ResponseEntity.ok(ApiResponse.success(inbox));
+        UUID conversationId = chatService.getConversationIdByOrderId(orderId, currentUser.getId());
+        return ResponseEntity.ok(ApiResponse.success(conversationId));
     }
 }

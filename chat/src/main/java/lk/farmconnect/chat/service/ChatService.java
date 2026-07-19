@@ -10,6 +10,8 @@ import lk.farmconnect.chat.repository.MessageRepository;
 import lk.farmconnect.common.exception.BusinessException;
 import lk.farmconnect.common.exception.ResourceNotFoundException;
 import lk.farmconnect.common.service.StorageService;
+import lk.farmconnect.order.entity.Order;
+import lk.farmconnect.order.repository.OrderRepository;
 import lk.farmconnect.user.User;
 import lk.farmconnect.user.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -32,6 +34,7 @@ public class ChatService {
     private final UserRepository userRepository;
     private final MessageMapper messageMapper;
     private final StorageService storageService;
+    private final OrderRepository orderRepository;
 
 
     // REAL-TIME MESSAGE SENDING
@@ -137,5 +140,24 @@ public class ChatService {
                 // Sort by the most recent activity
                 .sorted((a, b) -> b.lastMessageTime().compareTo(a.lastMessageTime()))
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public UUID getConversationIdByOrderId(UUID orderId, UUID userId) {
+        // First, verify the user has access to this order
+        // We need to inject OrderRepository to validate access
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
+
+        // Security check: Only buyer or farmer can access the conversation
+        if (!order.getBuyer().getId().equals(userId) &&
+                !order.getFarmer().getId().equals(userId)) {
+            throw new BusinessException("Access denied: You are not authorized to access this order's conversation");
+        }
+
+        // Return conversation ID if exists
+        return conversationRepository.findByOrder(order)
+                .map(Conversation::getId)
+                .orElse(null);
     }
 }

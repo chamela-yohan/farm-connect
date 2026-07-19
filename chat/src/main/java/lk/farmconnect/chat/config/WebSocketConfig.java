@@ -36,9 +36,9 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         registry.addEndpoint("/ws-chat")
                 // Split the comma-separated string into an array
-                .setAllowedOriginPatterns(allowedOrigins.split(","));
+                .setAllowedOriginPatterns(allowedOrigins.split(","))
         // SockJS fallback ensures WebSockets work even if strict corporate firewalls block them
-        //  .withSockJS();
+          .withSockJS();
     }
 
     @Override

@@ -25,5 +25,6 @@ public record OrderResponse(
         String buyerNotes,
         String farmerNotes,
         List<OrderItemResponse> items,
+        UUID conversationId,
         LocalDateTime createdAt
 ) {}
