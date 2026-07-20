@@ -25,12 +25,12 @@ public class Conversation {
 
 
     @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "order_id", unique = true)
+    @JoinColumn(name = "order_id",nullable = true, unique = true)
     private Order order;
 
 
     @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "booking_id", unique = true)
+    @JoinColumn(name = "booking_id",nullable = true, unique = true)
     private Booking booking;
 
     @ManyToOne(fetch = FetchType.LAZY)

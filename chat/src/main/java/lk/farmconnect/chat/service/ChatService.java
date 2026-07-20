@@ -1,5 +1,7 @@
 package lk.farmconnect.chat.service;
 
+import lk.farmconnect.booking.entity.Booking;
+import lk.farmconnect.booking.repository.BookingRepository;
 import lk.farmconnect.chat.dto.ConversationSummaryResponse;
 import lk.farmconnect.chat.dto.MessageResponse;
 import lk.farmconnect.chat.entity.Conversation;
@@ -35,6 +37,7 @@ public class ChatService {
     private final MessageMapper messageMapper;
     private final StorageService storageService;
     private final OrderRepository orderRepository;
+    private final BookingRepository bookingRepository;
 
 
     // REAL-TIME MESSAGE SENDING
@@ -157,6 +160,22 @@ public class ChatService {
 
         // Return conversation ID if exists
         return conversationRepository.findByOrder(order)
+                .map(Conversation::getId)
+                .orElse(null);
+    }
+
+    @Transactional(readOnly = true)
+    public UUID getConversationIdByBookingId(UUID bookingId, UUID userId) {
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new ResourceNotFoundException("Booking not found"));
+
+        // Security check: Only buyer or farmer can access
+        if (!booking.getBuyer().getId().equals(userId) &&
+                !booking.getFarmer().getId().equals(userId)) {
+            throw new BusinessException("Access denied: You are not authorized to access this booking's conversation");
+        }
+
+        return conversationRepository.findByBooking(booking)
                 .map(Conversation::getId)
                 .orElse(null);
     }

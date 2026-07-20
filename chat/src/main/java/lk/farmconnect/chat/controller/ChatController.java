@@ -68,4 +68,15 @@ public class ChatController {
         UUID conversationId = chatService.getConversationIdByOrderId(orderId, currentUser.getId());
         return ResponseEntity.ok(ApiResponse.success(conversationId));
     }
+
+
+    // Get conversation ID for a specific booking
+    @GetMapping("/booking/{bookingId}/conversation")
+    public ResponseEntity<ApiResponse<UUID>> getConversationByBooking(
+            @PathVariable UUID bookingId,
+            @AuthenticationPrincipal User currentUser) {
+
+        UUID conversationId = chatService.getConversationIdByBookingId(bookingId, currentUser.getId());
+        return ResponseEntity.ok(ApiResponse.success(conversationId));
+    }
 }
