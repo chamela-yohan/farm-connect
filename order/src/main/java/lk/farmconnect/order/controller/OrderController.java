@@ -146,4 +146,14 @@ public class OrderController {
         // Return it as JSON
         return ResponseEntity.ok(ApiResponse.success(freshUrl, "Invoice URL generated successfully"));
     }
+
+    // BUYER ENDPOINT: Confirm Receipt (Moves to COMPLETED, unlocks reviews)
+    @PutMapping("/{id}/confirm-receipt")
+    public ResponseEntity<ApiResponse<OrderResponse>> confirmReceipt(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal User buyer) {
+
+        OrderResponse updatedOrder = orderService.confirmReceipt(id, buyer);
+        return ResponseEntity.ok(ApiResponse.success(updatedOrder, "Order marked as completed. You can now leave a review!"));
+    }
 }

@@ -114,21 +114,27 @@ public class OrderService {
     // ==========================================
     @Transactional
     public OrderResponse updateOrderStatus(UUID orderId, OrderStatusUpdateRequest request, User currentUser) {
+        // 1. Fetch Order (Lazy collections like getItems() will initialize safely within this @Transactional block)
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
 
+        // 2. Strict Security Check
         if (!order.getFarmer().getId().equals(currentUser.getId())) {
             throw new BusinessException("Access Denied: Only the assigned farmer can update this order.");
         }
 
         OrderStatus oldStatus = order.getStatus();
+
+        // 3. Domain-Driven State Machine Validation
+        // This throws a BusinessException if the transition is invalid (e.g., PENDING -> DELIVERED)
         order.transitionTo(request.newStatus());
 
+        // 4. Update Latest Communication (Separation of current state vs. historical audit)
         if (request.notes() != null && !request.notes().isBlank()) {
             order.setFarmerNotes(request.notes());
         }
 
-        // STOCK MANAGEMENT LOGIC (Only for Physical Goods)
+        // 5. Stock Management Logic (Strictly for Physical Goods)
         if (request.newStatus() == OrderStatus.ACCEPTED) {
             for (OrderItem item : order.getItems()) {
                 Product product = item.getProduct();
@@ -137,8 +143,14 @@ public class OrderService {
                 }
             }
             eventPublisher.publishEvent(new OrderAcceptedEvent(this, order));
+
         } else if (request.newStatus() == OrderStatus.CANCELLED || request.newStatus() == OrderStatus.REJECTED) {
-            if (oldStatus == OrderStatus.ACCEPTED || oldStatus == OrderStatus.READY_FOR_PICKUP || oldStatus == OrderStatus.OUT_FOR_DELIVERY) {
+            // Only restore stock if it was previously deducted (i.e., it was ACCEPTED or further along)
+            if (oldStatus == OrderStatus.ACCEPTED ||
+                    oldStatus == OrderStatus.PREPARING ||
+                    oldStatus == OrderStatus.READY_FOR_PICKUP ||
+                    oldStatus == OrderStatus.OUT_FOR_DELIVERY) {
+
                 for (OrderItem item : order.getItems()) {
                     Product product = item.getProduct();
                     if (product.getProductType() == ProductType.PHYSICAL_GOOD) {
@@ -146,11 +158,13 @@ public class OrderService {
                     }
                 }
             }
+
             if (request.newStatus() == OrderStatus.REJECTED) {
                 eventPublisher.publishEvent(new OrderRejectedEvent(this, order));
             }
         }
 
+        // 6. Immutable Audit Trail
         OrderStatusHistory history = OrderStatusHistory.builder()
                 .order(order)
                 .oldStatus(oldStatus)
@@ -159,9 +173,11 @@ public class OrderService {
                 .build();
         historyRepository.save(history);
 
+        // 7. Save and Handle Concurrency (Optimistic Locking)
         try {
             return orderMapper.toOrderResponse(orderRepository.save(order));
         } catch (OptimisticLockingFailureException e) {
+            log.warn("Optimistic lock failure on order {} update by farmer {}", orderId, currentUser.getId());
             throw new BusinessException("Stock conflict detected. The product stock was updated by another user. Please refresh and try again.");
         }
     }
@@ -216,6 +232,7 @@ public class OrderService {
             // Jackson's JsonNode is immutable, but Hibernate maps it as ObjectNode which is mutable
             if (product.getAttributes() instanceof ObjectNode objNode) {
                 objNode.put("availableStock", newStock);
+                product.setAttributes(objNode);
             }
         }
     }
@@ -311,5 +328,34 @@ public class OrderService {
         }
 
         return orders.map(orderMapper::toOrderResponse);
+    }
+
+    // Allow Buyer to mark order as completed (unlocks Reviews)
+    @Transactional
+    public OrderResponse confirmReceipt(UUID orderId, User buyer) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
+
+        if (!order.getBuyer().getId().equals(buyer.getId())) {
+            throw new BusinessException("Access Denied: You can only confirm your own orders.");
+        }
+
+        if (order.getStatus() != OrderStatus.DELIVERED) {
+            throw new BusinessException("You can only mark an order as completed after it has been delivered.");
+        }
+
+        OrderStatus oldStatus = order.getStatus();
+        order.setStatus(OrderStatus.COMPLETED);
+
+        // Optional: Save to history
+        OrderStatusHistory history = OrderStatusHistory.builder()
+                .order(order)
+                .oldStatus(oldStatus)
+                .newStatus(OrderStatus.COMPLETED)
+                .notes("Buyer confirmed receipt")
+                .build();
+        historyRepository.save(history);
+
+        return orderMapper.toOrderResponse(orderRepository.save(order));
     }
 }

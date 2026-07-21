@@ -1,6 +1,7 @@
 package lk.farmconnect.order.entity;
 
 import jakarta.persistence.*;
+import lk.farmconnect.common.exception.BusinessException;
 import lk.farmconnect.user.User;
 import lombok.*;
 
@@ -88,38 +89,23 @@ public class Order {
     //Domain-Driven state machine
     public void transitionTo(OrderStatus newStatus) {
         if (!getAllowedTransitions(this.status).contains(newStatus)) {
-            throw new lk.farmconnect.common.exception.BusinessException(
-                    "Invalid status transition from " + this.status + " to " + newStatus
-            );
+            throw new BusinessException("Invalid status transition from " + this.status + " to " + newStatus);
         }
         this.status = newStatus;
     }
 
-    private java.util.List<OrderStatus> getAllowedTransitions(OrderStatus current) {
-
-        boolean isPickup = this.deliveryMethod == lk.farmconnect.order.entity.DeliveryMethod.PICKUP;
-
+    //  CONTEXT-AWARE TRANSITIONS (Checks Delivery Method)
+    private List<OrderStatus> getAllowedTransitions(OrderStatus current) {
         return switch (current) {
-            case PENDING -> java.util.List.of(OrderStatus.ACCEPTED, OrderStatus.REJECTED, OrderStatus.CANCELLED);
-
-            case ACCEPTED -> {
-                // If Pickup, they can only prepare it. If Delivery, they can prepare or start delivering.
-                if (isPickup) yield java.util.List.of(OrderStatus.READY_FOR_PICKUP, OrderStatus.CANCELLED);
-                yield java.util.List.of(OrderStatus.READY_FOR_PICKUP, OrderStatus.OUT_FOR_DELIVERY, OrderStatus.CANCELLED);
-            }
-
-            case READY_FOR_PICKUP -> {
-                // If Pickup, the next step is the buyer picking it up (DELIVERED).
-                // If Delivery, the next step is driving (OUT_FOR_DELIVERY) or direct delivery (DELIVERED).
-                if (isPickup) yield java.util.List.of(OrderStatus.DELIVERED, OrderStatus.CANCELLED);
-                yield java.util.List.of(OrderStatus.OUT_FOR_DELIVERY, OrderStatus.DELIVERED, OrderStatus.CANCELLED);
-            }
-
-            case OUT_FOR_DELIVERY -> java.util.List.of(OrderStatus.DELIVERED, OrderStatus.CANCELLED);
-            case DELIVERED -> java.util.List.of(OrderStatus.COMPLETED);
-
-            // Terminal states cannot transition
-            case REJECTED, CANCELLED, COMPLETED -> java.util.List.of();
+            case PENDING -> List.of(OrderStatus.ACCEPTED, OrderStatus.REJECTED, OrderStatus.CANCELLED);
+            case ACCEPTED -> List.of(OrderStatus.PREPARING, OrderStatus.CANCELLED);
+            case PREPARING -> this.deliveryMethod == DeliveryMethod.DELIVERY
+                    ? List.of(OrderStatus.OUT_FOR_DELIVERY, OrderStatus.CANCELLED)
+                    : List.of(OrderStatus.READY_FOR_PICKUP, OrderStatus.CANCELLED);
+            case OUT_FOR_DELIVERY -> List.of(OrderStatus.DELIVERED, OrderStatus.CANCELLED);
+            case READY_FOR_PICKUP -> List.of(OrderStatus.DELIVERED, OrderStatus.CANCELLED);
+            case DELIVERED -> List.of(); // Only the buyer can move to COMPLETED
+            case COMPLETED, REJECTED, CANCELLED -> List.of(); // Terminal states
         };
     }
 
