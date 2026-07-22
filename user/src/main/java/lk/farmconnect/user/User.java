@@ -56,6 +56,14 @@ public class User implements UserDetails {
     @Builder.Default
     private Integer totalReviews = 0;
 
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean isVerified = false;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean accountNonLocked = true;
+
     @Column(nullable = false, updatable = false)
     private java.time.LocalDateTime createdAt;
 
@@ -93,10 +101,10 @@ public class User implements UserDetails {
         return true;
     }
 
-    @Override
-    public boolean isAccountNonLocked() {
-        return true;
-    }
+   // @Override
+    //public boolean isAccountNonLocked() {
+     //   return true;
+    //}
 
     @Override
     public boolean isCredentialsNonExpired() {
@@ -106,6 +114,11 @@ public class User implements UserDetails {
     @Override
     public boolean isEnabled() {
         return true;
+    }
+
+    @Override
+    public boolean isAccountNonLocked() {
+        return this.accountNonLocked;
     }
 
 
