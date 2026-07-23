@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import lk.farmconnect.order.entity.Order;
 import lk.farmconnect.user.User;
 import lombok.*;
+import org.hibernate.annotations.SQLRestriction;
+
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -12,6 +14,7 @@ import java.util.UUID;
         @Index(name = "idx_review_farmer", columnList = "farmer_id"),
         @Index(name = "idx_review_order", columnList = "order_id", unique = true) // 1 review per order
 })
+@SQLRestriction("is_deleted = false") // Automatically filter out deleted reviews
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class Review {
 
@@ -40,6 +43,10 @@ public class Review {
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
+
+    @Column(name = "is_deleted", nullable = false)
+    @Builder.Default
+    private boolean isDeleted = false;
 
     @PrePersist
     protected void onCreate() {

@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import lk.farmconnect.user.User;
 import lombok.*;
 import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.annotations.SQLRestriction;
 import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
@@ -17,6 +18,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "products")
+@SQLRestriction("is_deleted = false")
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class Product {
 
@@ -94,7 +96,8 @@ public class Product {
     private Set<Integer> deliveryDistrictIds = new HashSet<>();
 
     // Metadata & Optimistic Locking
-    @Column(name = "is_deleted")
+    @Column(name = "is_deleted", nullable = false)
+    @Builder.Default
     private boolean isDeleted = false;
 
     @Column(name = "created_at", updatable = false)
@@ -105,6 +108,10 @@ public class Product {
 
     @Version
     private Integer version;
+
+    public void softDelete() {
+        this.isDeleted = true;
+    }
 
     @PrePersist
     protected void onCreate() {
