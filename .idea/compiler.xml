@@ -18,6 +18,7 @@
         <module name="auth" />
         <module name="chat" />
         <module name="review" />
+        <module name="admin" />
         <module name="user" />
         <module name="order" />
       </profile>
@@ -25,6 +26,7 @@
   </component>
   <component name="JavacSettings">
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">
+      <module name="admin" options="-parameters" />
       <module name="app" options="-parameters" />
       <module name="auth" options="-parameters" />
       <module name="booking" options="-parameters" />
